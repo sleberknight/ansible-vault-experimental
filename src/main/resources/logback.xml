@@ -11,7 +11,7 @@
     <logger name="org.example" level="DEBUG"/>
 
     <!-- Change to TRACE to show the encrypted content written to temp files during decryption -->
-    <logger name="org.example.ansible.vault.VaultEncryptionHelper" level="DEBUG"/>
+    <logger name="org.example.ansible.vault.VaultEncryptionHelper" level="TRACE"/>
 
     <root level="INFO">
         <appender-ref ref="STDOUT"/>

@@ -117,12 +117,30 @@ public class VaultEncryptionHelper {
                                  String secretName,
                                  EncryptionConfiguration configuration) {
 
+        logArgsToExecuteVaultOsCommand(key, commandType, secretName, configuration);
+
         var osCommand = getOsCommand(key, commandType, secretName, configuration);
         LOG.debug("Ansible command: {}", lazy(osCommand::getOsCommandParts));
         var encryptionProcess = getProcess(osCommand);
 
 //        return processCommandStream(encryptionProcess);
         return processCommandStreamAsString(encryptionProcess);
+    }
+
+    // This should eventually be removed, but want to see exactly what's being passed now...
+    // (to see, you'll obviously need to change the logback.xml configuration to TRACE level)
+    private void logArgsToExecuteVaultOsCommand(String key,
+                                                VaultCommandType commandType,
+                                                String secretName,
+                                                EncryptionConfiguration configuration) {
+
+        LOG.trace("executeVaultOsCommand args:");
+        LOG.trace("key: {}", key);
+        LOG.trace("commandType: {}", commandType);
+        LOG.trace("secretName: {}", secretName);
+        LOG.trace("configuration.ansibleVaultPath: {}", configuration.getAnsibleVaultPath());
+        LOG.trace("configuration.ansibleVaultIdPath: {}", configuration.getAnsibleVaultIdPath());
+        LOG.trace("configuration.tempDirectory: {}", configuration.getTempDirectory());
     }
 
     // Original implementation with dependency on commons-io's IOUtils
