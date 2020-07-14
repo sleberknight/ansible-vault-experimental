@@ -16,6 +16,5 @@ public class EncryptionConfiguration {
     private String ansibleVaultPath;
     private String ansibleVaultIdPath;
     private String tempDirectory;
-    private String vaultToken;  // TODO I think this can be safely removed...it has no usages
 
 }

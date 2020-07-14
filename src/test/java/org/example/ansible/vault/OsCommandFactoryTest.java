@@ -16,7 +16,6 @@ class OsCommandFactoryTest {
         config = EncryptionConfiguration.builder()
                 .ansibleVaultIdPath("vaultId")
                 .ansibleVaultPath("vaultExecutablePath")
-                .vaultToken("vaultToken")
                 .build();
 
         factory = new OsCommandFactory(config);
