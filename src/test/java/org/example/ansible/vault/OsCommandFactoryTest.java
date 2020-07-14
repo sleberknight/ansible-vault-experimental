@@ -8,14 +8,16 @@ import org.junit.jupiter.api.Test;
 
 class OsCommandFactoryTest {
 
-    private EncryptionConfiguration config;
+    private static final String ANSIBLE_VAULT_PATH = "/opt/ansible/ansible-vault";
+    private static final String PASSWORD_FILE_PATH = "/path/to/password_file";
+
     private OsCommandFactory factory;
 
     @BeforeEach
     void setUp() {
-        config = EncryptionConfiguration.builder()
-                .vaultPasswordFilePath("vaultId")
-                .ansibleVaultPath("vaultExecutablePath")
+        var config = VaultConfiguration.builder()
+                .ansibleVaultPath(ANSIBLE_VAULT_PATH)
+                .vaultPasswordFilePath(PASSWORD_FILE_PATH)
                 .build();
 
         factory = new OsCommandFactory(config);
@@ -25,13 +27,13 @@ class OsCommandFactoryTest {
     void getOsCommand_Encrypt() {
         var osCommand = factory.getOsCommand(VaultCommandType.ENCRYPT, "My-Secret", "my-secret-name");
 
-        assertThat(osCommand).isExactlyInstanceOf(AnsibleVaultEncryptStringCommand.class);
+        assertThat(osCommand).isExactlyInstanceOf(VaultEncryptStringCommand.class);
 
         assertThat(osCommand.getOsCommandParts()).containsExactly(
-                "vaultExecutablePath",
+                ANSIBLE_VAULT_PATH,
                 "encrypt_string",
                 "My-Secret",
-                "--vault-password-file", "vaultId",
+                "--vault-password-file", PASSWORD_FILE_PATH,
                 "--name", "my-secret-name"
         );
     }
@@ -40,12 +42,12 @@ class OsCommandFactoryTest {
     void getOsCommand_Decrypt() {
         var osCommand = factory.getOsCommand(VaultCommandType.DECRYPT, "My-Secret", "my-secret-name");
 
-        assertThat(osCommand).isExactlyInstanceOf(AnsibleVaultDecryptCommand.class);
+        assertThat(osCommand).isExactlyInstanceOf(VaultDecryptCommand.class);
 
         assertThat(osCommand.getOsCommandParts()).containsExactly(
-                "vaultExecutablePath",
+                ANSIBLE_VAULT_PATH,
                 "decrypt",
-                "--vault-password-file", "vaultId",
+                "--vault-password-file", PASSWORD_FILE_PATH,
                 "--output", "-",
                 "My-Secret"
         );

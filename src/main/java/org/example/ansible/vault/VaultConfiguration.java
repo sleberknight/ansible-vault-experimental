@@ -11,7 +11,7 @@ import lombok.Setter;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class EncryptionConfiguration {
+public class VaultConfiguration {
 
     private String ansibleVaultPath;
     private String vaultPasswordFilePath;

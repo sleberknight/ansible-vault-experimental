@@ -4,9 +4,9 @@ import static org.kiwiproject.base.KiwiPreconditions.checkArgumentNotNull;
 
 public class OsCommandFactory {
 
-    private final EncryptionConfiguration configuration;
+    private final VaultConfiguration configuration;
 
-    public OsCommandFactory(EncryptionConfiguration configuration) {
+    public OsCommandFactory(VaultConfiguration configuration) {
         this.configuration = configuration;
     }
 
@@ -15,10 +15,10 @@ public class OsCommandFactory {
 
         switch (type) {
             case ENCRYPT:
-                return AnsibleVaultEncryptStringCommand.from(configuration, key, secretName);
+                return VaultEncryptStringCommand.from(configuration, key, secretName);
 
             case DECRYPT:
-                return AnsibleVaultDecryptCommand.from(configuration, key);
+                return VaultDecryptCommand.from(configuration, key);
 
             default:
                 throw new IllegalStateException("Unknown command type: " + type.name());

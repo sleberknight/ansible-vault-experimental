@@ -7,7 +7,7 @@ import java.nio.file.Paths;
 import java.util.regex.Pattern;
 
 @Getter
-public class SecretFileDescriptor {
+public class VaultSecretFileDescriptor {
 
     private static final String ANSIBLE_ENCRYPTION_PREAMBLE = "$ANSIBLE_VAULT;1.1;AES256";
 
@@ -23,7 +23,7 @@ public class SecretFileDescriptor {
     private final String payloadToWrite;
     private final String fileExtension;
 
-    public SecretFileDescriptor(String key, Path directoryPath) {
+    public VaultSecretFileDescriptor(String key, Path directoryPath) {
         this.key = key;
         this.fileExtension = DEFAULT_FILE_EXTENSION;
         this.directoryPath = directoryPath;
