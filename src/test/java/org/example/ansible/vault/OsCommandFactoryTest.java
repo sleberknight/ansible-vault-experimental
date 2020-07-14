@@ -14,7 +14,7 @@ class OsCommandFactoryTest {
     @BeforeEach
     void setUp() {
         config = EncryptionConfiguration.builder()
-                .ansibleVaultIdPath("vaultId")
+                .vaultPasswordFilePath("vaultId")
                 .ansibleVaultPath("vaultExecutablePath")
                 .build();
 
@@ -25,7 +25,7 @@ class OsCommandFactoryTest {
     void getOsCommand_Encrypt() {
         var osCommand = factory.getOsCommand(VaultCommandType.ENCRYPT, "My-Secret", "my-secret-name");
 
-        assertThat(osCommand).isExactlyInstanceOf(AnsibleVaultEncryptCommand.class);
+        assertThat(osCommand).isExactlyInstanceOf(AnsibleVaultEncryptStringCommand.class);
 
         assertThat(osCommand.getOsCommandParts()).containsExactly(
                 "vaultExecutablePath",
