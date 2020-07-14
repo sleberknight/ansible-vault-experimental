@@ -10,7 +10,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
-import io.dropwizard.testing.FixtureHelpers;
+import org.example.ansible.vault.testing.Fixtures;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -66,7 +66,7 @@ class VaultEncryptionHelperTest {
                 anyString(),
                 any(EncryptionConfiguration.class));
 
-        var key = FixtureHelpers.fixture(ENCRYPTION_ENCRYPTED_KEY_FILE_TXT);
+        var key = Fixtures.fixture(ENCRYPTION_ENCRYPTED_KEY_FILE_TXT);
         var decryptedKeyValue = helper.getDecryptedKeyValue(key, configuration);
 
         assertThat(decryptedKeyValue).isEqualTo(keyValue);
@@ -75,7 +75,7 @@ class VaultEncryptionHelperTest {
     @Test
     void getEncryptedKeyValue() {
         var keyValue = "test-encrypt";
-        var encryptedValue = FixtureHelpers.fixture(ENCRYPTION_ENCRYPTED_KEY_FILE_TXT);
+        var encryptedValue = Fixtures.fixture(ENCRYPTION_ENCRYPTED_KEY_FILE_TXT);
 
         doReturn(encryptedValue).when(helper).executeVaultOsCommand(
                 anyString(),
