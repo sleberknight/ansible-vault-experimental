@@ -40,7 +40,7 @@ class VaultEncryptionHelperTest {
     Path folder;
 
     private VaultEncryptionHelper helper;
-    private EncryptionConfiguration configuration;
+    private VaultConfiguration configuration;
 
     @BeforeEach
     void setUp() throws IOException {
@@ -48,7 +48,7 @@ class VaultEncryptionHelperTest {
         var vaultFilePath = Files.createFile(Path.of(folder.toString(), "ansible-vault"));
         Files.writeString(passwordFilePath, "test");
 
-        configuration = EncryptionConfiguration.builder()
+        configuration = VaultConfiguration.builder()
                 .ansibleVaultPath(vaultFilePath.toString())
                 .vaultPasswordFilePath(passwordFilePath.toString())
                 .tempDirectory(folder.toString())
@@ -64,7 +64,7 @@ class VaultEncryptionHelperTest {
                 anyString(),
                 eq(VaultCommandType.DECRYPT),
                 anyString(),
-                any(EncryptionConfiguration.class));
+                any(VaultConfiguration.class));
 
         var key = Fixtures.fixture(ENCRYPTION_ENCRYPTED_KEY_FILE_TXT);
         var decryptedKeyValue = helper.getDecryptedKeyValue(key, configuration);
@@ -75,19 +75,17 @@ class VaultEncryptionHelperTest {
     @Test
     void getEncryptedKeyValue() {
         var keyValue = "test-encrypt";
-        var encryptedValue = Fixtures.fixture(ENCRYPTION_ENCRYPTED_KEY_FILE_TXT);
+        var encryptedFixtureValue = Fixtures.fixture(ENCRYPTION_ENCRYPTED_KEY_FILE_TXT);
 
-        doReturn(encryptedValue).when(helper).executeVaultOsCommand(
+        doReturn(encryptedFixtureValue).when(helper).executeVaultOsCommand(
                 anyString(),
                 eq(VaultCommandType.ENCRYPT),
                 anyString(),
-                any(EncryptionConfiguration.class));
+                any(VaultConfiguration.class));
 
-        // [sic] original code named this decryptedKeyValue, which makes the assertion
-        // below it not make much sense...leaving as-is for now.
-        var decryptedValue = helper.getEncryptedValue(keyValue, "Vault-secret", configuration);
+        var encryptedValue = helper.getEncryptedValue(keyValue, "Vault-secret", configuration);
 
-        assertThat(decryptedValue).isEqualTo(encryptedValue);
+        assertThat(encryptedValue).isEqualTo(encryptedFixtureValue);
     }
 
     @Test
@@ -124,7 +122,7 @@ class VaultEncryptionHelperTest {
                         VaultCommandType.ENCRYPT,
                         "mySecret",
                         configuration))
-                .isExactlyInstanceOf(EncryptionException.class)
+                .isExactlyInstanceOf(VaultEncryptionException.class)
                 .hasCauseExactlyInstanceOf(IOException.class)
                 .hasMessageStartingWith("Error reading/writing encryption stream");
     }
@@ -134,7 +132,7 @@ class VaultEncryptionHelperTest {
                 anyString(),
                 eq(VaultCommandType.ENCRYPT),
                 anyString(),
-                any(EncryptionConfiguration.class));
+                any(VaultConfiguration.class));
 
         doReturn(processMock).when(helper).getProcess(any(OsCommand.class));
     }
@@ -143,7 +141,7 @@ class VaultEncryptionHelperTest {
     void getOsCommand() {
         var command = helper.getOsCommand("secret-squirrel", VaultCommandType.ENCRYPT, "mySecret", configuration);
 
-        assertThat(command).isExactlyInstanceOf(AnsibleVaultEncryptStringCommand.class)
+        assertThat(command).isExactlyInstanceOf(VaultEncryptStringCommand.class)
                 .extracting("ansibleVaultPath", "vaultPasswordFilePath", "secretName", "secret")
                 .contains(
                         configuration.getAnsibleVaultPath(),

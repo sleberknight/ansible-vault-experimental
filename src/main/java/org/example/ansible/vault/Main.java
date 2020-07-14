@@ -38,7 +38,7 @@ public class Main {
         System.out.println(encryptedContent);
         System.out.println();
 
-        var config = EncryptionConfiguration.builder()
+        var config = VaultConfiguration.builder()
                 .ansibleVaultPath(ansibleVaultExecPath.toString())
                 .vaultPasswordFilePath(vaultPasswordPath.toString())
                 .tempDirectory(tempPath.toString())

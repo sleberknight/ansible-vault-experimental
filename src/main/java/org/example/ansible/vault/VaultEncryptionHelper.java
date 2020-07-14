@@ -26,9 +26,9 @@ public class VaultEncryptionHelper {
 
     private static final String LINE_SEPARATOR = System.lineSeparator();
 
-    public String getDecryptedKeyValue(String key, EncryptionConfiguration configuration) {
+    public String getDecryptedKeyValue(String key, VaultConfiguration configuration) {
         validateEncryptionConfiguration(configuration);
-        var secretFileDescriptor = new SecretFileDescriptor(key, Paths.get(configuration.getTempDirectory()));
+        var secretFileDescriptor = new VaultSecretFileDescriptor(key, Paths.get(configuration.getTempDirectory()));
         var tempKeyFile = secretFileDescriptor.getTempKeyFile();
 
         try {
@@ -46,15 +46,15 @@ public class VaultEncryptionHelper {
         }
     }
 
-    private static void validateEncryptionConfiguration(EncryptionConfiguration configuration) {
+    private static void validateEncryptionConfiguration(VaultConfiguration configuration) {
         checkArgument(
                 doesPathExist(configuration.getVaultPasswordFilePath()),
-                EncryptionException.class,
+                VaultEncryptionException.class,
                 "vault password file does not exist: {}", configuration.getVaultPasswordFilePath()
         );
         checkArgument(
                 doesPathExist(configuration.getAnsibleVaultPath()),
-                EncryptionException.class,
+                VaultEncryptionException.class,
                 "ansible-vault executable does not exist: {}", configuration.getAnsibleVaultPath()
         );
     }
@@ -63,11 +63,11 @@ public class VaultEncryptionHelper {
         return Files.exists(Paths.get(filePath));
     }
 
-    public String getEncryptedValue(String key, String secretName, EncryptionConfiguration configuration) {
+    public String getEncryptedValue(String key, String secretName, VaultConfiguration configuration) {
         return executeVaultOsCommand(key, VaultCommandType.ENCRYPT, secretName, configuration);
     }
 
-    private void copyEncryptedKeyToTempFile(SecretFileDescriptor fileDescriptor) {
+    private void copyEncryptedKeyToTempFile(VaultSecretFileDescriptor fileDescriptor) {
         var keyFile = getTempFile(fileDescriptor.getDirectoryPath(), fileDescriptor.getTempKeyFile());
         var bytes = fileDescriptor.getPayloadToWrite().getBytes(StandardCharsets.UTF_8);
 
@@ -80,7 +80,7 @@ public class VaultEncryptionHelper {
             inputStream.transferTo(outputStream);
         } catch (IOException e) {
             LOG.error("Error copying to temp file", e);
-            throw new EncryptionException("Error copying to temp file", e);
+            throw new VaultEncryptionException("Error copying to temp file", e);
         }
     }
 
@@ -99,7 +99,7 @@ public class VaultEncryptionHelper {
         } catch (IOException e) {
             var message = format("Could not get temp file {} in path {}", tempKeyFile, directoryPath);
             LOG.error(message, e);
-            throw new EncryptionException(message, e);
+            throw new VaultEncryptionException(message, e);
         }
     }
 
@@ -117,7 +117,7 @@ public class VaultEncryptionHelper {
     String executeVaultOsCommand(String key,
                                  VaultCommandType commandType,
                                  String secretName,
-                                 EncryptionConfiguration configuration) {
+                                 VaultConfiguration configuration) {
 
         logArgsToExecuteVaultOsCommand(key, commandType, secretName, configuration);
 
@@ -133,7 +133,7 @@ public class VaultEncryptionHelper {
     private void logArgsToExecuteVaultOsCommand(String key,
                                                 VaultCommandType commandType,
                                                 String secretName,
-                                                EncryptionConfiguration configuration) {
+                                                VaultConfiguration configuration) {
 
         LOG.trace("executeVaultOsCommand args:");
         LOG.trace("key: {}", key);
@@ -144,14 +144,13 @@ public class VaultEncryptionHelper {
         LOG.trace("configuration.tempDirectory: {}", configuration.getTempDirectory());
     }
 
-    // New implementation only using JDK's InputStream.transferTo
     String processCommandStream(Process encryptionProcess) {
         var outputStream = new ByteArrayOutputStream();
 
         try {
             encryptionProcess.getInputStream().transferTo(outputStream);
         } catch (IOException e) {
-            throw new EncryptionException("Error reading/writing encryption stream", e);
+            throw new VaultEncryptionException("Error reading/writing encryption stream", e);
         }
 
         return outputStream.toString(StandardCharsets.UTF_8);
@@ -166,7 +165,7 @@ public class VaultEncryptionHelper {
     OsCommand getOsCommand(String key,
                            VaultCommandType commandType,
                            String secretName,
-                           EncryptionConfiguration configuration) {
+                           VaultConfiguration configuration) {
 
         return new OsCommandFactory(configuration).getOsCommand(commandType, key, secretName);
     }
