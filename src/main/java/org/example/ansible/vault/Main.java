@@ -40,7 +40,7 @@ public class Main {
 
         var config = EncryptionConfiguration.builder()
                 .ansibleVaultPath(ansibleVaultExecPath.toString())
-                .ansibleVaultIdPath(vaultPasswordPath.toString())
+                .vaultPasswordFilePath(vaultPasswordPath.toString())
                 .tempDirectory(tempPath.toString())
                 .build();
 

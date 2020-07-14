@@ -15,7 +15,7 @@ public class OsCommandFactory {
 
         switch (type) {
             case ENCRYPT:
-                return AnsibleVaultEncryptCommand.from(configuration, key, secretName);
+                return AnsibleVaultEncryptStringCommand.from(configuration, key, secretName);
 
             case DECRYPT:
                 return AnsibleVaultDecryptCommand.from(configuration, key);

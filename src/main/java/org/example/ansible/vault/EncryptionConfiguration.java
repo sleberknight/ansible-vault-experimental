@@ -14,7 +14,7 @@ import lombok.Setter;
 public class EncryptionConfiguration {
 
     private String ansibleVaultPath;
-    private String ansibleVaultIdPath;
+    private String vaultPasswordFilePath;
     private String tempDirectory;
 
 }

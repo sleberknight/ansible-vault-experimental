@@ -50,7 +50,7 @@ class VaultEncryptionHelperTest {
 
         configuration = EncryptionConfiguration.builder()
                 .ansibleVaultPath(vaultFilePath.toString())
-                .ansibleVaultIdPath(passwordFilePath.toString())
+                .vaultPasswordFilePath(passwordFilePath.toString())
                 .tempDirectory(folder.toString())
                 .build();
 
@@ -143,11 +143,11 @@ class VaultEncryptionHelperTest {
     void getOsCommand() {
         var command = helper.getOsCommand("secret-squirrel", VaultCommandType.ENCRYPT, "mySecret", configuration);
 
-        assertThat(command).isExactlyInstanceOf(AnsibleVaultEncryptCommand.class)
-                .extracting("vaultId", "applicationPath", "secretName", "secret")
+        assertThat(command).isExactlyInstanceOf(AnsibleVaultEncryptStringCommand.class)
+                .extracting("ansibleVaultPath", "vaultPasswordFilePath", "secretName", "secret")
                 .contains(
-                        configuration.getAnsibleVaultIdPath(),
                         configuration.getAnsibleVaultPath(),
+                        configuration.getVaultPasswordFilePath(),
                         "secret-squirrel",
                         "mySecret"
                 );

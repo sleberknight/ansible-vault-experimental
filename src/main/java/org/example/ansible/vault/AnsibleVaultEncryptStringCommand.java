@@ -2,22 +2,22 @@ package org.example.ansible.vault;
 
 import lombok.Builder;
 
-import java.nio.file.Paths;
 import java.util.List;
 
 @Builder
-public class AnsibleVaultDecryptCommand implements OsCommand {
+public class AnsibleVaultEncryptStringCommand implements OsCommand {
 
     private final String ansibleVaultPath;
     private final String vaultPasswordFilePath;
     private final String secretName;
-    private final String encryptedSecretFileName;
+    private final String secret;
 
-    public static OsCommand from(EncryptionConfiguration configuration, String encryptedSecretFileName) {
-        return AnsibleVaultDecryptCommand.builder()
+    public static OsCommand from(EncryptionConfiguration configuration, String key, String secretName) {
+        return AnsibleVaultEncryptStringCommand.builder()
                 .ansibleVaultPath(configuration.getAnsibleVaultPath())
                 .vaultPasswordFilePath(configuration.getVaultPasswordFilePath())
-                .encryptedSecretFileName(encryptedSecretFileName)
+                .secretName(secretName)
+                .secret(key)
                 .build();
     }
 
@@ -25,10 +25,9 @@ public class AnsibleVaultDecryptCommand implements OsCommand {
     public List<String> getOsCommandParts() {
         return List.of(
                 ansibleVaultPath,
-                "decrypt",
+                "encrypt_string", secret,
                 "--vault-password-file", vaultPasswordFilePath,
-                "--output", "-",
-                Paths.get(encryptedSecretFileName).toString()
+                "--name", secretName
         );
     }
 }

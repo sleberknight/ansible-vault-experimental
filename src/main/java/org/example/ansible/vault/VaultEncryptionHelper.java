@@ -48,14 +48,14 @@ public class VaultEncryptionHelper {
 
     private static void validateEncryptionConfiguration(EncryptionConfiguration configuration) {
         checkArgument(
-                doesPathExist(configuration.getAnsibleVaultIdPath()),
+                doesPathExist(configuration.getVaultPasswordFilePath()),
                 EncryptionException.class,
-                "AnsibleVaultId file does not exist: {}", configuration.getAnsibleVaultIdPath()
+                "vault password file does not exist: {}", configuration.getVaultPasswordFilePath()
         );
         checkArgument(
                 doesPathExist(configuration.getAnsibleVaultPath()),
                 EncryptionException.class,
-                "Ansible Vault executable does not exist: {}", configuration.getAnsibleVaultPath()
+                "ansible-vault executable does not exist: {}", configuration.getAnsibleVaultPath()
         );
     }
 
@@ -140,7 +140,7 @@ public class VaultEncryptionHelper {
         LOG.trace("commandType: {}", commandType);
         LOG.trace("secretName: {}", secretName);
         LOG.trace("configuration.ansibleVaultPath: {}", configuration.getAnsibleVaultPath());
-        LOG.trace("configuration.ansibleVaultIdPath: {}", configuration.getAnsibleVaultIdPath());
+        LOG.trace("configuration.vaultPasswordFilePath: {}", configuration.getVaultPasswordFilePath());
         LOG.trace("configuration.tempDirectory: {}", configuration.getTempDirectory());
     }
 
