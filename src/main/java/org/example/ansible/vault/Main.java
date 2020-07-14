@@ -28,7 +28,15 @@ public class Main {
 //        var tempPath = Path.of(separator, "tmp", "vault-play", "temp");
 //        var encryptedPath = Path.of(separator, "tmp", "vault-play", "baz.yml");
 
+        System.out.println("Reading from encrypted path: " + encryptedPath);
+        System.out.println("Using vault password file: " + vaultPasswordPath);
+        System.out.println("Using temporary folder: " + tempPath);
+        System.out.println();
+
         var encryptedContent = Files.readString(encryptedPath);
+        System.out.println("Encrypted content:");
+        System.out.println(encryptedContent);
+        System.out.println();
 
         var config = EncryptionConfiguration.builder()
                 .ansibleVaultPath(ansibleVaultExecPath.toString())

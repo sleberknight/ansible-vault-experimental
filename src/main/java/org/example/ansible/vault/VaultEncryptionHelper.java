@@ -84,6 +84,10 @@ public class VaultEncryptionHelper {
         }
     }
 
+    // TODO
+    //  This does not need to actually create the temp file
+    //  It should be changed and renamed to 'createTemporaryDirectoriesIfNecessary' or similar
+    //  The log messages need to be changed
     private static File getTempFile(Path directoryPath, Path tempKeyFile) {
         try {
             Files.createDirectories(directoryPath);
