@@ -77,9 +77,7 @@ public class VaultEncryptionHelper {
             LOG.trace("Payload to write ----{}{}", LINE_SEPARATOR, fileDescriptor.getPayloadToWrite());
             LOG.trace("End payload ----");
 
-            // Change original from using commons-io's IOUtils to use only JDK transferTo
             inputStream.transferTo(outputStream);
-//            IOUtils.copy(inputStream, outputStream);
         } catch (IOException e) {
             LOG.error("Error copying to temp file", e);
             throw new EncryptionException("Error copying to temp file", e);
@@ -123,8 +121,7 @@ public class VaultEncryptionHelper {
         LOG.debug("Ansible command: {}", lazy(osCommand::getOsCommandParts));
         var encryptionProcess = getProcess(osCommand);
 
-//        return processCommandStream(encryptionProcess);
-        return processCommandStreamAsString(encryptionProcess);
+        return processCommandStream(encryptionProcess);
     }
 
     // This should eventually be removed, but want to see exactly what's being passed now...
@@ -143,24 +140,8 @@ public class VaultEncryptionHelper {
         LOG.trace("configuration.tempDirectory: {}", configuration.getTempDirectory());
     }
 
-    // Original implementation with dependency on commons-io's IOUtils
-/*
-    @VisibleForTesting
-    String processCommandStream(Process encryptionProcess) {
-        var writer = new StringWriter();
-
-        try {
-            IOUtils.copy(encryptionProcess.getInputStream(), writer, StandardCharsets.UTF_8.name());
-        } catch (IOException e) {
-            throw new EncryptionException("Error reading/writing encryption stream", e);
-        }
-
-        return writer.toString();
-    }
-*/
-
     // New implementation only using JDK's InputStream.transferTo
-    String processCommandStreamAsString(Process encryptionProcess) {
+    String processCommandStream(Process encryptionProcess) {
         var outputStream = new ByteArrayOutputStream();
 
         try {

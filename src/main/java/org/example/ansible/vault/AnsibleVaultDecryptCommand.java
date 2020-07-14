@@ -12,7 +12,7 @@ public class AnsibleVaultDecryptCommand implements OsCommand {
     private final String vaultId;
     private final String applicationPath;
     private final String secretName;
-    private final String encryptedSecretPath;
+    private final String encryptedSecretPath;  // TODO I think this can safely be removed; it has no usages except below where a bogus value is used
     private final String encryptedSecretFileName;
 
     public static OsCommand from(EncryptionConfiguration configuration, String encryptedSecretFileName) {
