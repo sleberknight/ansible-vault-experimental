@@ -58,32 +58,32 @@ class VaultEncryptionHelperTest {
     }
 
     @Test
-    void getDecryptedKeyValue() {
-        var keyValue = "test-encrypt";
-        doReturn(keyValue).when(helper).executeVaultOsCommand(
+    void decryptString() {
+        var value = "test-encrypt";
+        doReturn(value).when(helper).executeVaultOsCommand(
                 anyString(),
                 eq(VaultCommandType.DECRYPT),
                 anyString(),
                 any(VaultConfiguration.class));
 
-        var key = Fixtures.fixture(ENCRYPTION_ENCRYPTED_KEY_FILE_TXT);
-        var decryptedKeyValue = helper.getDecryptedKeyValue(key, configuration);
+        var encryptedString = Fixtures.fixture(ENCRYPTION_ENCRYPTED_KEY_FILE_TXT);
+        var decryptedValue = helper.decryptString(encryptedString, configuration);
 
-        assertThat(decryptedKeyValue).isEqualTo(keyValue);
+        assertThat(decryptedValue).isEqualTo(value);
     }
 
     @Test
-    void getEncryptedKeyValue() {
-        var keyValue = "test-encrypt";
+    void encryptString() {
+        var plainText = "test value";
         var encryptedFixtureValue = Fixtures.fixture(ENCRYPTION_ENCRYPTED_KEY_FILE_TXT);
 
         doReturn(encryptedFixtureValue).when(helper).executeVaultOsCommand(
                 anyString(),
-                eq(VaultCommandType.ENCRYPT),
+                eq(VaultCommandType.ENCRYPT_STRING),
                 anyString(),
                 any(VaultConfiguration.class));
 
-        var encryptedValue = helper.getEncryptedValue(keyValue, "Vault-secret", configuration);
+        var encryptedValue = helper.encryptString(plainText, "Vault-secret", configuration);
 
         assertThat(encryptedValue).isEqualTo(encryptedFixtureValue);
     }
@@ -98,7 +98,7 @@ class VaultEncryptionHelperTest {
         var inputStream = new ByteArrayInputStream(encryptedValue.getBytes(StandardCharsets.UTF_8));
         when(processMock.getInputStream()).thenReturn(inputStream);
 
-        var mySecret = helper.executeVaultOsCommand("secret-squirrel", VaultCommandType.ENCRYPT, "mySecret", configuration);
+        var mySecret = helper.executeVaultOsCommand("secret-squirrel", VaultCommandType.ENCRYPT_STRING, "mySecret", configuration);
 
         assertThat(mySecret).isEqualTo(encryptedValue);
     }
@@ -119,7 +119,7 @@ class VaultEncryptionHelperTest {
 
         assertThatThrownBy(() ->
                 helper.executeVaultOsCommand("secret-squirrel",
-                        VaultCommandType.ENCRYPT,
+                        VaultCommandType.ENCRYPT_STRING,
                         "mySecret",
                         configuration))
                 .isExactlyInstanceOf(VaultEncryptionException.class)
@@ -130,7 +130,7 @@ class VaultEncryptionHelperTest {
     private void configureMocks(OsCommand osCommandMock, Process processMock) {
         doReturn(osCommandMock).when(helper).getOsCommand(
                 anyString(),
-                eq(VaultCommandType.ENCRYPT),
+                eq(VaultCommandType.ENCRYPT_STRING),
                 anyString(),
                 any(VaultConfiguration.class));
 
@@ -139,10 +139,10 @@ class VaultEncryptionHelperTest {
 
     @Test
     void getOsCommand() {
-        var command = helper.getOsCommand("secret-squirrel", VaultCommandType.ENCRYPT, "mySecret", configuration);
+        var command = helper.getOsCommand("secret-squirrel", VaultCommandType.ENCRYPT_STRING, "mySecret", configuration);
 
         assertThat(command).isExactlyInstanceOf(VaultEncryptStringCommand.class)
-                .extracting("ansibleVaultPath", "vaultPasswordFilePath", "secretName", "secret")
+                .extracting("ansibleVaultPath", "vaultPasswordFilePath", "variableName", "plainText")
                 .contains(
                         configuration.getAnsibleVaultPath(),
                         configuration.getVaultPasswordFilePath(),

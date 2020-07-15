@@ -10,14 +10,13 @@ public class VaultDecryptCommand implements OsCommand {
 
     private final String ansibleVaultPath;
     private final String vaultPasswordFilePath;
-    private final String secretName;
-    private final String encryptedSecretFileName;
+    private final String encryptedFileName;
 
-    public static OsCommand from(VaultConfiguration configuration, String encryptedSecretFileName) {
+    public static OsCommand from(VaultConfiguration configuration, String encryptedFileName) {
         return VaultDecryptCommand.builder()
                 .ansibleVaultPath(configuration.getAnsibleVaultPath())
                 .vaultPasswordFilePath(configuration.getVaultPasswordFilePath())
-                .encryptedSecretFileName(encryptedSecretFileName)
+                .encryptedFileName(encryptedFileName)
                 .build();
     }
 
@@ -28,7 +27,7 @@ public class VaultDecryptCommand implements OsCommand {
                 "decrypt",
                 "--vault-password-file", vaultPasswordFilePath,
                 "--output", "-",
-                Paths.get(encryptedSecretFileName).toString()
+                Paths.get(encryptedFileName).toString()
         );
     }
 }

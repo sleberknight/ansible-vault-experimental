@@ -9,15 +9,15 @@ public class VaultEncryptStringCommand implements OsCommand {
 
     private final String ansibleVaultPath;
     private final String vaultPasswordFilePath;
-    private final String secretName;
-    private final String secret;
+    private final String variableName;
+    private final String plainText;
 
-    public static OsCommand from(VaultConfiguration configuration, String key, String secretName) {
+    public static OsCommand from(VaultConfiguration configuration, String plainText, String variableName) {
         return VaultEncryptStringCommand.builder()
                 .ansibleVaultPath(configuration.getAnsibleVaultPath())
                 .vaultPasswordFilePath(configuration.getVaultPasswordFilePath())
-                .secretName(secretName)
-                .secret(key)
+                .variableName(variableName)
+                .plainText(plainText)
                 .build();
     }
 
@@ -25,9 +25,9 @@ public class VaultEncryptStringCommand implements OsCommand {
     public List<String> getOsCommandParts() {
         return List.of(
                 ansibleVaultPath,
-                "encrypt_string", secret,
+                "encrypt_string", plainText,
                 "--vault-password-file", vaultPasswordFilePath,
-                "--name", secretName
+                "--name", variableName
         );
     }
 }

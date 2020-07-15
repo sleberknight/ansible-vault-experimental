@@ -10,15 +10,21 @@ public class OsCommandFactory {
         this.configuration = configuration;
     }
 
-    public OsCommand getOsCommand(VaultCommandType type, String key, String secretName) {
+    // TODO Not sure it's worth having this entire class at all, since the arguments are so different
+    //  By renaming them to what they are in the encrypt_string and decrypt cases, that becomes very noticeable!
+    //  Plus variableName is only used for encrypt_string
+    public OsCommand getOsCommand(VaultCommandType type,
+                                  String plainTextOrEncryptedFileName,
+                                  String variableName) {
+
         checkArgumentNotNull(type, "type cannot be null");
 
         switch (type) {
-            case ENCRYPT:
-                return VaultEncryptStringCommand.from(configuration, key, secretName);
+            case ENCRYPT_STRING:
+                return VaultEncryptStringCommand.from(configuration, plainTextOrEncryptedFileName, variableName);
 
             case DECRYPT:
-                return VaultDecryptCommand.from(configuration, key);
+                return VaultDecryptCommand.from(configuration, plainTextOrEncryptedFileName);
 
             default:
                 throw new IllegalStateException("Unknown command type: " + type.name());
