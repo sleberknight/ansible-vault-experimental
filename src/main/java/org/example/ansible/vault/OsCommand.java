@@ -3,7 +3,7 @@ package org.example.ansible.vault;
 import java.util.List;
 import java.util.function.Supplier;
 
-public interface OsCommand extends Supplier<List<String>> {
+interface OsCommand extends Supplier<List<String>> {
 
     List<String> getOsCommandParts();
 
