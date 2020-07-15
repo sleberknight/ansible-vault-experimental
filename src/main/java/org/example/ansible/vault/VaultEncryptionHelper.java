@@ -26,23 +26,32 @@ public class VaultEncryptionHelper {
 
     private static final String LINE_SEPARATOR = System.lineSeparator();
 
-    public String getDecryptedKeyValue(String key, VaultConfiguration configuration) {
+    public String encryptString(String plainText, String variableName, VaultConfiguration configuration) {
         validateEncryptionConfiguration(configuration);
-        var secretFileDescriptor = new VaultSecretFileDescriptor(key, Paths.get(configuration.getTempDirectory()));
-        var tempKeyFile = secretFileDescriptor.getTempKeyFile();
+
+        return executeVaultOsCommand(plainText, VaultCommandType.ENCRYPT_STRING, variableName, configuration);
+    }
+
+    public String decryptString(String encryptedString, VaultConfiguration configuration) {
+        validateEncryptionConfiguration(configuration);
+
+        var secretFileDescriptor =
+                new VaultSecretFileDescriptor(encryptedString, Paths.get(configuration.getTempDirectory()));
+
+        var tempFilePath = secretFileDescriptor.getTempFilePath();
 
         try {
             copyEncryptedKeyToTempFile(secretFileDescriptor);
 
-            return executeVaultOsCommand(tempKeyFile.toString(),
+            return executeVaultOsCommand(tempFilePath.toString(),
                     VaultCommandType.DECRYPT,
-                    "VaultKey",
+                    "",  // TODO not needed for decrypt, but can't be null due to mocking in tests
                     configuration);
         } catch (Exception e) {
             LOG.error("Error decrypting", e);
             throw e;
         } finally {
-            cleanUpTempFile(tempKeyFile);
+            cleanUpTempFile(tempFilePath);
         }
     }
 
@@ -63,15 +72,11 @@ public class VaultEncryptionHelper {
         return Files.exists(Paths.get(filePath));
     }
 
-    public String getEncryptedValue(String key, String secretName, VaultConfiguration configuration) {
-        return executeVaultOsCommand(key, VaultCommandType.ENCRYPT, secretName, configuration);
-    }
-
     private void copyEncryptedKeyToTempFile(VaultSecretFileDescriptor fileDescriptor) {
-        var keyFile = getTempFile(fileDescriptor.getDirectoryPath(), fileDescriptor.getTempKeyFile());
+        var tempFile = getTempFile(fileDescriptor.getDirectoryPath(), fileDescriptor.getTempFilePath());
         var bytes = fileDescriptor.getPayloadToWrite().getBytes(StandardCharsets.UTF_8);
 
-        try (var outputStream = new BufferedOutputStream(new FileOutputStream(keyFile))) {
+        try (var outputStream = new BufferedOutputStream(new FileOutputStream(tempFile))) {
             var inputStream = new BufferedInputStream(new ByteArrayInputStream(bytes));
             // Modified original logging a bit to more clearly show start & end of payload content
             LOG.trace("Payload to write ----{}{}", LINE_SEPARATOR, fileDescriptor.getPayloadToWrite());
@@ -114,14 +119,14 @@ public class VaultEncryptionHelper {
     }
 
     @VisibleForTesting
-    String executeVaultOsCommand(String key,
+    String executeVaultOsCommand(String plainTextOrEncryptedFileName,
                                  VaultCommandType commandType,
-                                 String secretName,
+                                 String variableName,
                                  VaultConfiguration configuration) {
 
-        logArgsToExecuteVaultOsCommand(key, commandType, secretName, configuration);
+        logArgsToExecuteVaultOsCommand(plainTextOrEncryptedFileName, commandType, variableName, configuration);
 
-        var osCommand = getOsCommand(key, commandType, secretName, configuration);
+        var osCommand = getOsCommand(plainTextOrEncryptedFileName, commandType, variableName, configuration);
         LOG.debug("Ansible command: {}", lazy(osCommand::getOsCommandParts));
         var encryptionProcess = getProcess(osCommand);
 
@@ -130,15 +135,15 @@ public class VaultEncryptionHelper {
 
     // This should eventually be removed, but want to see exactly what's being passed now...
     // (to see, you'll obviously need to change the logback.xml configuration to TRACE level)
-    private void logArgsToExecuteVaultOsCommand(String key,
+    private void logArgsToExecuteVaultOsCommand(String plainTextOrEncryptedFileName,
                                                 VaultCommandType commandType,
-                                                String secretName,
+                                                String variableName,
                                                 VaultConfiguration configuration) {
 
         LOG.trace("executeVaultOsCommand args:");
-        LOG.trace("key: {}", key);
+        LOG.trace("plainTextOrEncryptedFileName: {}", plainTextOrEncryptedFileName);
         LOG.trace("commandType: {}", commandType);
-        LOG.trace("secretName: {}", secretName);
+        LOG.trace("variableName: {}", variableName);
         LOG.trace("configuration.ansibleVaultPath: {}", configuration.getAnsibleVaultPath());
         LOG.trace("configuration.vaultPasswordFilePath: {}", configuration.getVaultPasswordFilePath());
         LOG.trace("configuration.tempDirectory: {}", configuration.getTempDirectory());
@@ -162,11 +167,11 @@ public class VaultEncryptionHelper {
     }
 
     @VisibleForTesting
-    OsCommand getOsCommand(String key,
+    OsCommand getOsCommand(String plainTextOrEncryptedFileName,
                            VaultCommandType commandType,
-                           String secretName,
+                           String variableName,
                            VaultConfiguration configuration) {
 
-        return new OsCommandFactory(configuration).getOsCommand(commandType, key, secretName);
+        return new OsCommandFactory(configuration).getOsCommand(commandType, plainTextOrEncryptedFileName, variableName);
     }
 }

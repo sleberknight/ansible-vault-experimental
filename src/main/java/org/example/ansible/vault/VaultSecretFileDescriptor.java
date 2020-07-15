@@ -17,23 +17,23 @@ public class VaultSecretFileDescriptor {
 
     private static final Path DEFAULT_DIRECTORY_PATH = Paths.get("/tmp", "/vms", "encrypted");
 
-    private final String key;
+    private final String encryptedString;
     private final Path directoryPath;
-    private final Path tempKeyFile;
+    private final Path tempFilePath;
     private final String payloadToWrite;
     private final String fileExtension;
 
-    public VaultSecretFileDescriptor(String key, Path directoryPath) {
-        this.key = key;
+    public VaultSecretFileDescriptor(String encryptedString, Path directoryPath) {
+        this.encryptedString = encryptedString;
         this.fileExtension = DEFAULT_FILE_EXTENSION;
         this.directoryPath = directoryPath;
 
-        var keyParts = key.split(":");
-        var keyFileName = keyParts[0];
-        var payload = keyParts[1];
+        var splat = encryptedString.split(":");
+        var variableName = splat[0];
+        var payload = splat[1];
         var newPayload = payload.split("\\" + ANSIBLE_ENCRYPTION_PREAMBLE)[1];
         var cleanedUpPayload = WHITE_SPACE_PATTERN.matcher(newPayload).replaceAll("");
-        this.tempKeyFile = Paths.get(directoryPath.toString(), keyFileName + "." + fileExtension);
+        this.tempFilePath = Paths.get(directoryPath.toString(), variableName + "." + fileExtension);
         this.payloadToWrite = ANSIBLE_ENCRYPTION_PREAMBLE + System.lineSeparator() + cleanedUpPayload;
     }
 }

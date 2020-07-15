@@ -25,7 +25,7 @@ class OsCommandFactoryTest {
 
     @Test
     void getOsCommand_Encrypt() {
-        var osCommand = factory.getOsCommand(VaultCommandType.ENCRYPT, "My-Secret", "my-secret-name");
+        var osCommand = factory.getOsCommand(VaultCommandType.ENCRYPT_STRING, "My-Secret", "my-secret-name");
 
         assertThat(osCommand).isExactlyInstanceOf(VaultEncryptStringCommand.class);
 

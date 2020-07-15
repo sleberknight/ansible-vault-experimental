@@ -34,9 +34,9 @@ public class Main {
         System.out.println("Using temporary folder: " + tempPath);
         System.out.println();
 
-        var encryptedContent = Files.readString(encryptedPath, StandardCharsets.UTF_8);
-        System.out.println("Encrypted content:");
-        System.out.println(encryptedContent);
+        var encryptedString = Files.readString(encryptedPath, StandardCharsets.UTF_8);
+        System.out.println("Encrypted string:");
+        System.out.println(encryptedString);
         System.out.println();
 
         var config = VaultConfiguration.builder()
@@ -47,22 +47,22 @@ public class Main {
 
         var helper = new VaultEncryptionHelper();
 
-        var decryptedValue = helper.getDecryptedKeyValue(encryptedContent, config);
+        var decryptedValue = helper.decryptString(encryptedString, config);
         printDecryptedValue(decryptedValue);
 
         // --- Do several encrypt/decrypt cycles ----
 
-        var secretName = "VaultSecret";
+        var variableName = "MyVaultSecret";
         var plainText = decryptedValue;
 
         for (int i = 1; i <= 5; i++) {
             System.out.printf(
                     "---------- Iteration %d -------------------------------------------------------------------%n%n", i);
 
-            var encryptedValue = helper.getEncryptedValue(plainText, secretName, config);
+            var encryptedValue = helper.encryptString(plainText, variableName, config);
             printEncryptedValue(encryptedValue);
 
-            var reDecryptedValue = helper.getDecryptedKeyValue(encryptedValue, config);
+            var reDecryptedValue = helper.decryptString(encryptedValue, config);
             printDecryptedValue(reDecryptedValue);
 
             plainText = reDecryptedValue;
