@@ -2,6 +2,7 @@ package org.example.ansible.vault;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
@@ -33,7 +34,7 @@ public class Main {
         System.out.println("Using temporary folder: " + tempPath);
         System.out.println();
 
-        var encryptedContent = Files.readString(encryptedPath);
+        var encryptedContent = Files.readString(encryptedPath, StandardCharsets.UTF_8);
         System.out.println("Encrypted content:");
         System.out.println(encryptedContent);
         System.out.println();

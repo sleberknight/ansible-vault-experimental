@@ -19,7 +19,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
@@ -95,7 +95,7 @@ class VaultEncryptionHelperTest {
         var processMock = mock(Process.class);
         configureMocks(osCommandMock, processMock);
 
-        var inputStream = new ByteArrayInputStream(encryptedValue.getBytes(Charset.defaultCharset()));
+        var inputStream = new ByteArrayInputStream(encryptedValue.getBytes(StandardCharsets.UTF_8));
         when(processMock.getInputStream()).thenReturn(inputStream);
 
         var mySecret = helper.executeVaultOsCommand("secret-squirrel", VaultCommandType.ENCRYPT, "mySecret", configuration);
