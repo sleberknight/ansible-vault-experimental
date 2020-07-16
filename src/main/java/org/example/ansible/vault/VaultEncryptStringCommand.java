@@ -22,7 +22,7 @@ public class VaultEncryptStringCommand implements OsCommand {
     }
 
     @Override
-    public List<String> getOsCommandParts() {
+    public List<String> getCommandParts() {
         return List.of(
                 ansibleVaultPath,
                 "encrypt_string", plainText,

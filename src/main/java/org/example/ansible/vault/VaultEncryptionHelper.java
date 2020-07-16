@@ -1,6 +1,6 @@
 package org.example.ansible.vault;
 
-import static org.kiwiproject.base.KiwiPreconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkArgument;
 import static org.kiwiproject.base.KiwiStrings.format;
 import static org.kiwiproject.logging.LazyLogParameterSupplier.lazy;
 
@@ -28,8 +28,8 @@ public class VaultEncryptionHelper {
 
     public String encryptString(String plainText, String variableName, VaultConfiguration configuration) {
         validateEncryptionConfiguration(configuration);
-
-        return executeVaultOsCommand(plainText, VaultCommandType.ENCRYPT_STRING, variableName, configuration);
+        var osCommand = VaultEncryptStringCommand.from(configuration, plainText, variableName);
+        return executeVaultCommand(osCommand);
     }
 
     public String decryptString(String encryptedString, VaultConfiguration configuration) {
@@ -42,11 +42,8 @@ public class VaultEncryptionHelper {
 
         try {
             copyEncryptedKeyToTempFile(secretFileDescriptor);
-
-            return executeVaultOsCommand(tempFilePath.toString(),
-                    VaultCommandType.DECRYPT,
-                    "",  // TODO not needed for decrypt, but can't be null due to mocking in tests
-                    configuration);
+            var osCommand = VaultDecryptCommand.from(configuration, tempFilePath.toString());
+            return executeVaultCommand(osCommand);
         } catch (Exception e) {
             LOG.error("Error decrypting", e);
             throw e;
@@ -56,16 +53,10 @@ public class VaultEncryptionHelper {
     }
 
     private static void validateEncryptionConfiguration(VaultConfiguration configuration) {
-        checkArgument(
-                doesPathExist(configuration.getVaultPasswordFilePath()),
-                VaultEncryptionException.class,
-                "vault password file does not exist: {}", configuration.getVaultPasswordFilePath()
-        );
-        checkArgument(
-                doesPathExist(configuration.getAnsibleVaultPath()),
-                VaultEncryptionException.class,
-                "ansible-vault executable does not exist: {}", configuration.getAnsibleVaultPath()
-        );
+        checkArgument(doesPathExist(configuration.getVaultPasswordFilePath()),
+                "vault password file does not exist: {}", configuration.getVaultPasswordFilePath());
+        checkArgument(doesPathExist(configuration.getAnsibleVaultPath()),
+                "ansible-vault executable does not exist: {}", configuration.getAnsibleVaultPath());
     }
 
     private static boolean doesPathExist(String filePath) {
@@ -78,7 +69,6 @@ public class VaultEncryptionHelper {
 
         try (var outputStream = new BufferedOutputStream(new FileOutputStream(tempFile))) {
             var inputStream = new BufferedInputStream(new ByteArrayInputStream(bytes));
-            // Modified original logging a bit to more clearly show start & end of payload content
             LOG.trace("Payload to write ----{}{}", LINE_SEPARATOR, fileDescriptor.getPayloadToWrite());
             LOG.trace("End payload ----");
 
@@ -119,59 +109,24 @@ public class VaultEncryptionHelper {
     }
 
     @VisibleForTesting
-    String executeVaultOsCommand(String plainTextOrEncryptedFileName,
-                                 VaultCommandType commandType,
-                                 String variableName,
-                                 VaultConfiguration configuration) {
-
-        logArgsToExecuteVaultOsCommand(plainTextOrEncryptedFileName, commandType, variableName, configuration);
-
-        var osCommand = getOsCommand(plainTextOrEncryptedFileName, commandType, variableName, configuration);
-        LOG.debug("Ansible command: {}", lazy(osCommand::getOsCommandParts));
-        var encryptionProcess = getProcess(osCommand);
-
-        return processCommandStream(encryptionProcess);
+    String executeVaultCommand(OsCommand osCommand) {
+        LOG.debug("Ansible command: {}", lazy(osCommand::getCommandParts));
+        var vaultProcess = getProcess(osCommand);
+        return readProcessOutputAsString(vaultProcess);
     }
 
-    // This should eventually be removed, but want to see exactly what's being passed now...
-    // (to see, you'll obviously need to change the logback.xml configuration to TRACE level)
-    private void logArgsToExecuteVaultOsCommand(String plainTextOrEncryptedFileName,
-                                                VaultCommandType commandType,
-                                                String variableName,
-                                                VaultConfiguration configuration) {
-
-        LOG.trace("executeVaultOsCommand args:");
-        LOG.trace("plainTextOrEncryptedFileName: {}", plainTextOrEncryptedFileName);
-        LOG.trace("commandType: {}", commandType);
-        LOG.trace("variableName: {}", variableName);
-        LOG.trace("configuration.ansibleVaultPath: {}", configuration.getAnsibleVaultPath());
-        LOG.trace("configuration.vaultPasswordFilePath: {}", configuration.getVaultPasswordFilePath());
-        LOG.trace("configuration.tempDirectory: {}", configuration.getTempDirectory());
-    }
-
-    String processCommandStream(Process encryptionProcess) {
-        var outputStream = new ByteArrayOutputStream();
-
+    String readProcessOutputAsString(Process encryptionProcess) {
         try {
+            var outputStream = new ByteArrayOutputStream();
             encryptionProcess.getInputStream().transferTo(outputStream);
+            return outputStream.toString(StandardCharsets.UTF_8);
         } catch (IOException e) {
-            throw new VaultEncryptionException("Error reading/writing encryption stream", e);
+            throw new VaultEncryptionException("Error transferring process output to string ", e);
         }
-
-        return outputStream.toString(StandardCharsets.UTF_8);
     }
 
     @VisibleForTesting
     Process getProcess(OsCommand command) {
-        return new ProcessHelper().launch(command.getOsCommandParts());
-    }
-
-    @VisibleForTesting
-    OsCommand getOsCommand(String plainTextOrEncryptedFileName,
-                           VaultCommandType commandType,
-                           String variableName,
-                           VaultConfiguration configuration) {
-
-        return new OsCommandFactory(configuration).getOsCommand(commandType, plainTextOrEncryptedFileName, variableName);
+        return new ProcessHelper().launch(command.getCommandParts());
     }
 }
