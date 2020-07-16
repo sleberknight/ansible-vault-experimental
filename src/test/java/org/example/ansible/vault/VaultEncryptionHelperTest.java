@@ -3,15 +3,16 @@ package org.example.ansible.vault;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import org.example.ansible.vault.testing.Fixtures;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -29,13 +30,14 @@ import java.nio.file.Path;
 // is available, or assume a known location and if present use it and test using the
 // actual command?
 
+@DisplayName("VaultEncryptionHelper")
 class VaultEncryptionHelperTest {
 
-    private static final String ENCRYPTION_ENCRYPTED_KEY_FILE_TXT =
-            "encryption/encrypted_key_file.txt";
+    private static final String ENCRYPTED_FILE_PATH = "encryption/encrypted_key_file.txt";
 
-    // Original code used the (obsolete) KiwiTempDirectory.
-    // Replaced with JUnit Jupiter's @TempDir
+    // This is the variable name in the above encrypted file
+    private static final String VARIABLE_NAME = "VaultSecret";
+
     @TempDir
     Path folder;
 
@@ -60,32 +62,40 @@ class VaultEncryptionHelperTest {
     @Test
     void decryptString() {
         var value = "test-encrypt";
-        doReturn(value).when(helper).executeVaultOsCommand(
-                anyString(),
-                eq(VaultCommandType.DECRYPT),
-                anyString(),
-                any(VaultConfiguration.class));
+        doReturn(value).when(helper).executeVaultCommand(any(OsCommand.class));
 
-        var encryptedString = Fixtures.fixture(ENCRYPTION_ENCRYPTED_KEY_FILE_TXT);
+        var encryptedString = Fixtures.fixture(ENCRYPTED_FILE_PATH);
         var decryptedValue = helper.decryptString(encryptedString, configuration);
 
         assertThat(decryptedValue).isEqualTo(value);
+
+        verify(helper).executeVaultCommand(argThat(osCommand -> {
+            var encryptedFilePath = Path.of(folder.toString(), VARIABLE_NAME + ".txt");
+            var expectedCommandParts = VaultDecryptCommand.from(configuration, encryptedFilePath.toString()).getCommandParts();
+            assertThat(osCommand.getCommandParts()).isEqualTo(expectedCommandParts);
+
+            return true;
+        }));
     }
 
     @Test
     void encryptString() {
         var plainText = "test value";
-        var encryptedFixtureValue = Fixtures.fixture(ENCRYPTION_ENCRYPTED_KEY_FILE_TXT);
+        var encryptedFixtureValue = Fixtures.fixture(ENCRYPTED_FILE_PATH);
 
-        doReturn(encryptedFixtureValue).when(helper).executeVaultOsCommand(
-                anyString(),
-                eq(VaultCommandType.ENCRYPT_STRING),
-                anyString(),
-                any(VaultConfiguration.class));
+        doReturn(encryptedFixtureValue).when(helper).executeVaultCommand(any(OsCommand.class));
 
-        var encryptedValue = helper.encryptString(plainText, "Vault-secret", configuration);
+        var encryptedValue = helper.encryptString(plainText, VARIABLE_NAME, configuration);
 
         assertThat(encryptedValue).isEqualTo(encryptedFixtureValue);
+
+        verify(helper).executeVaultCommand(argThat(osCommand -> {
+            var expectedCommandParts = VaultEncryptStringCommand.from(configuration, plainText, VARIABLE_NAME).getCommandParts();
+            assertThat(osCommand.getCommandParts())
+                    .isEqualTo(expectedCommandParts);
+
+            return true;
+        }));
     }
 
     @Test
@@ -93,12 +103,12 @@ class VaultEncryptionHelperTest {
         var encryptedValue = "oogabooga";
         var osCommandMock = mock(OsCommand.class);
         var processMock = mock(Process.class);
-        configureMocks(osCommandMock, processMock);
+        doReturn(processMock).when(helper).getProcess(any(OsCommand.class));
 
         var inputStream = new ByteArrayInputStream(encryptedValue.getBytes(StandardCharsets.UTF_8));
         when(processMock.getInputStream()).thenReturn(inputStream);
 
-        var mySecret = helper.executeVaultOsCommand("secret-squirrel", VaultCommandType.ENCRYPT_STRING, "mySecret", configuration);
+        var mySecret = helper.executeVaultCommand(osCommandMock);
 
         assertThat(mySecret).isEqualTo(encryptedValue);
     }
@@ -108,46 +118,16 @@ class VaultEncryptionHelperTest {
         var osCommandMock = mock(OsCommand.class);
         var processMock = mock(Process.class);
         var inputStreamMock = mock(InputStream.class);
-        configureMocks(osCommandMock, processMock);
+        doReturn(processMock).when(helper).getProcess(any(OsCommand.class));
 
         when(processMock.getInputStream()).thenReturn(inputStreamMock);
-
-        // Original code using IOUtils#copy needs the commented out mocking (which is really white-box)
-        // Changing to use transferTo means we can tell the mock to throw the exception when it is called
-        //when(inputStreamMock.read()).thenThrow(new IOException());
         when(inputStreamMock.transferTo(any(OutputStream.class))).thenThrow(new IOException());
 
         assertThatThrownBy(() ->
-                helper.executeVaultOsCommand("secret-squirrel",
-                        VaultCommandType.ENCRYPT_STRING,
-                        "mySecret",
-                        configuration))
+                helper.executeVaultCommand(osCommandMock))
                 .isExactlyInstanceOf(VaultEncryptionException.class)
                 .hasCauseExactlyInstanceOf(IOException.class)
-                .hasMessageStartingWith("Error reading/writing encryption stream");
+                .hasMessageStartingWith("Error transferring process output to string");
     }
 
-    private void configureMocks(OsCommand osCommandMock, Process processMock) {
-        doReturn(osCommandMock).when(helper).getOsCommand(
-                anyString(),
-                eq(VaultCommandType.ENCRYPT_STRING),
-                anyString(),
-                any(VaultConfiguration.class));
-
-        doReturn(processMock).when(helper).getProcess(any(OsCommand.class));
-    }
-
-    @Test
-    void getOsCommand() {
-        var command = helper.getOsCommand("secret-squirrel", VaultCommandType.ENCRYPT_STRING, "mySecret", configuration);
-
-        assertThat(command).isExactlyInstanceOf(VaultEncryptStringCommand.class)
-                .extracting("ansibleVaultPath", "vaultPasswordFilePath", "variableName", "plainText")
-                .contains(
-                        configuration.getAnsibleVaultPath(),
-                        configuration.getVaultPasswordFilePath(),
-                        "secret-squirrel",
-                        "mySecret"
-                );
-    }
 }
