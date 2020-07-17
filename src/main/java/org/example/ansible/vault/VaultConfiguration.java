@@ -15,6 +15,8 @@ public class VaultConfiguration {
 
     private String ansibleVaultPath;
     private String vaultPasswordFilePath;
+
+    // TODO Should this default to the user's tmp dir?
     private String tempDirectory;
 
 }

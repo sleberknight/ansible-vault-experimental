@@ -12,9 +12,9 @@ import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -41,7 +41,7 @@ public class VaultEncryptionHelper {
         var tempFilePath = secretFileDescriptor.getTempFilePath();
 
         try {
-            copyEncryptedKeyToTempFile(secretFileDescriptor);
+            writeEncryptStringContentToTempFile(secretFileDescriptor);
             var osCommand = VaultDecryptCommand.from(configuration, tempFilePath.toString());
             return executeVaultCommand(osCommand);
         } catch (Exception e) {
@@ -63,8 +63,10 @@ public class VaultEncryptionHelper {
         return Files.exists(Paths.get(filePath));
     }
 
-    private void copyEncryptedKeyToTempFile(VaultSecretFileDescriptor fileDescriptor) {
-        var tempFile = getTempFile(fileDescriptor.getDirectoryPath(), fileDescriptor.getTempFilePath());
+    private void writeEncryptStringContentToTempFile(VaultSecretFileDescriptor fileDescriptor) {
+        createTemporaryDirectoriesIfNecessary(fileDescriptor.getTempDirectoryPath());
+
+        var tempFile = fileDescriptor.getTempFilePath().toFile();
         var bytes = fileDescriptor.getPayloadToWrite().getBytes(StandardCharsets.UTF_8);
 
         try (var outputStream = new BufferedOutputStream(new FileOutputStream(tempFile))) {
@@ -73,28 +75,20 @@ public class VaultEncryptionHelper {
             LOG.trace("End payload ----");
 
             inputStream.transferTo(outputStream);
+            LOG.debug("Wrote temporary file containing encrypt_string content: {}", tempFile);
         } catch (IOException e) {
-            LOG.error("Error copying to temp file", e);
+            LOG.error("Error copying to temp file: " + tempFile, e);
             throw new VaultEncryptionException("Error copying to temp file", e);
         }
     }
 
-    // TODO
-    //  This does not need to actually create the temp file
-    //  It should be changed and renamed to 'createTemporaryDirectoriesIfNecessary' or similar
-    //  The log messages need to be changed
-    private static File getTempFile(Path directoryPath, Path tempKeyFile) {
+    private static void createTemporaryDirectoriesIfNecessary(Path tempDirectoryPath) {
         try {
-            Files.createDirectories(directoryPath);
-            Files.createFile(tempKeyFile);
-            var tempFile = tempKeyFile.toFile();
-            LOG.debug("Wrote temp file: {}", tempFile);
-
-            return tempFile;
+            Files.createDirectories(tempDirectoryPath);
         } catch (IOException e) {
-            var message = format("Could not get temp file {} in path {}", tempKeyFile, directoryPath);
-            LOG.error(message, e);
-            throw new VaultEncryptionException(message, e);
+            var message = format("Error creating temporary directory: {}", tempDirectoryPath);
+            LOG.error(message);
+            throw new UncheckedIOException(message, e);
         }
     }
 
