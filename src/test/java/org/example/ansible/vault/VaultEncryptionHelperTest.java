@@ -15,6 +15,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.kiwiproject.collect.KiwiLists;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -23,6 +24,7 @@ import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 
 // Notes:
 // This original test mocks a lot (specifically the actual ansible-vault commands)
@@ -70,12 +72,29 @@ class VaultEncryptionHelperTest {
         assertThat(decryptedValue).isEqualTo(value);
 
         verify(helper).executeVaultCommand(argThat(osCommand -> {
+            // Check command up until last argument (file name)
             var encryptedFilePath = Path.of(folder.toString(), VARIABLE_NAME + ".txt");
-            var expectedCommandParts = VaultDecryptCommand.from(configuration, encryptedFilePath.toString()).getCommandParts();
-            assertThat(osCommand.getCommandParts()).isEqualTo(expectedCommandParts);
+            var vaultDecryptCommandParts =
+                    VaultDecryptCommand.from(configuration, encryptedFilePath.toString()).getCommandParts();
+
+            var commandParts = osCommand.getCommandParts();
+            var partsExcludingLast = subListExcludingLast(commandParts);
+
+            var expectedPathsExcludingLast = subListExcludingLast(vaultDecryptCommandParts);
+            assertThat(partsExcludingLast).isEqualTo(expectedPathsExcludingLast);
+
+            // Check file name, but ignore the random numbers in the middle of it
+            var lastPath = KiwiLists.last(commandParts);
+            assertThat(lastPath)
+                    .startsWith(Path.of(folder.toString(), VARIABLE_NAME + ".").toString())
+                    .endsWith(".txt");
 
             return true;
         }));
+    }
+
+    private List<String> subListExcludingLast(List<String> input) {
+        return input.subList(0, input.size() - 1);
     }
 
     @Test
