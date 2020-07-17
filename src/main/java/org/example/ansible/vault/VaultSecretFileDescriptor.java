@@ -7,7 +7,7 @@ import java.nio.file.Paths;
 import java.util.regex.Pattern;
 
 @Getter
-public class VaultSecretFileDescriptor {
+class VaultSecretFileDescriptor {
 
     private static final String ANSIBLE_ENCRYPTION_PREAMBLE = "$ANSIBLE_VAULT;1.1;AES256";
 
@@ -15,25 +15,23 @@ public class VaultSecretFileDescriptor {
 
     private static final Pattern WHITE_SPACE_PATTERN = Pattern.compile("\\s+");
 
-    private static final Path DEFAULT_DIRECTORY_PATH = Paths.get("/tmp", "/vms", "encrypted");
-
     private final String encryptedString;
-    private final Path directoryPath;
+    private final Path tempDirectoryPath;
     private final Path tempFilePath;
     private final String payloadToWrite;
     private final String fileExtension;
 
-    public VaultSecretFileDescriptor(String encryptedString, Path directoryPath) {
+    VaultSecretFileDescriptor(String encryptedString, Path tempDirectoryPath) {
         this.encryptedString = encryptedString;
         this.fileExtension = DEFAULT_FILE_EXTENSION;
-        this.directoryPath = directoryPath;
+        this.tempDirectoryPath = tempDirectoryPath;
 
         var splat = encryptedString.split(":");
         var variableName = splat[0];
         var payload = splat[1];
         var newPayload = payload.split("\\" + ANSIBLE_ENCRYPTION_PREAMBLE)[1];
         var cleanedUpPayload = WHITE_SPACE_PATTERN.matcher(newPayload).replaceAll("");
-        this.tempFilePath = Paths.get(directoryPath.toString(), variableName + "." + fileExtension);
+        this.tempFilePath = Paths.get(tempDirectoryPath.toString(), variableName + "." + fileExtension);
         this.payloadToWrite = ANSIBLE_ENCRYPTION_PREAMBLE + System.lineSeparator() + cleanedUpPayload;
     }
 }
