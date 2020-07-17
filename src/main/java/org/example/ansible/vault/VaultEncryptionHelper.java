@@ -48,7 +48,7 @@ public class VaultEncryptionHelper {
             LOG.error("Error decrypting", e);
             throw e;
         } finally {
-            cleanUpTempFile(tempFilePath);
+            deleteFileQuietly(tempFilePath);
         }
     }
 
@@ -92,13 +92,12 @@ public class VaultEncryptionHelper {
         }
     }
 
-    @VisibleForTesting
-    void cleanUpTempFile(Path path) {
+    private void deleteFileQuietly(Path path) {
         try {
-            LOG.debug("Cleanup temp file {}", path);
+            LOG.debug("Delete path: {}", path);
             Files.delete(path);
         } catch (IOException e) {
-            LOG.error("Could not delete file: {}", path, e);
+            LOG.error("Could not delete path: {}", path, e);
         }
     }
 
