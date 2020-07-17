@@ -3,7 +3,7 @@ package org.example.ansible.vault;
 import lombok.Getter;
 
 import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.regex.Pattern;
 
 @Getter
@@ -31,7 +31,15 @@ class VaultSecretFileDescriptor {
         var payload = splat[1];
         var newPayload = payload.split("\\" + ANSIBLE_ENCRYPTION_PREAMBLE)[1];
         var cleanedUpPayload = WHITE_SPACE_PATTERN.matcher(newPayload).replaceAll("");
-        this.tempFilePath = Paths.get(tempDirectoryPath.toString(), variableName + "." + fileExtension);
+        this.tempFilePath = Path.of(tempDirectoryPath.toString(), generateRandomFileName(variableName));
         this.payloadToWrite = ANSIBLE_ENCRYPTION_PREAMBLE + System.lineSeparator() + cleanedUpPayload;
+    }
+
+    private String generateRandomFileName(String variableName) {
+        return variableName +
+                "." +
+                Integer.toUnsignedString(ThreadLocalRandom.current().nextInt()) +
+                Long.toUnsignedString(ThreadLocalRandom.current().nextLong()) +
+                "." + fileExtension;
     }
 }
