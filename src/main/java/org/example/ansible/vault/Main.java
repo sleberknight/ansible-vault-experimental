@@ -10,7 +10,7 @@ import java.nio.file.Path;
  * This is a simple class to exercise the ansible vault code manually, and have it
  * actually execute ansible-vault.
  */
-@SuppressWarnings({"java:S106", "java:S1192"})
+@SuppressWarnings({"java:S106", "java:S1192", "java:S125"})
 public class Main {
 
     public static void main(String[] args) throws IOException {
