@@ -3,6 +3,7 @@ package org.example.ansible.vault;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toUnmodifiableList;
+import static org.example.ansible.vault.Utils.subListFrom;
 import static org.kiwiproject.base.KiwiPreconditions.checkArgumentNotBlank;
 
 import lombok.AccessLevel;
@@ -101,7 +102,7 @@ class VaultEncryptedVariable {
     // lines 3-N should be:
     // <10 spaces><cipher text>
     private void parseRemainingLines(List<String> lines) {
-        var remainingLines = lines.subList(2, lines.size());
+        var remainingLines = subListFrom(lines, 3);
         remainingLines.forEach(line -> {
             checkArgument(line.startsWith("          "), INVALID_SPACING_IN_ENCRYPTED_CONTENT);
             checkArgument(line.length() > 10 && line.charAt(10) != ' ', INVALID_FORMAT_IN_ENCRYPTED_CONTENT);

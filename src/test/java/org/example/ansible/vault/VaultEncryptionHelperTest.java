@@ -2,6 +2,7 @@ package org.example.ansible.vault;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.example.ansible.vault.Utils.subListExcludingLast;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.doReturn;
@@ -24,7 +25,6 @@ import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.List;
 
 // Notes:
 // This original test mocks a lot (specifically the actual ansible-vault commands)
@@ -91,10 +91,6 @@ class VaultEncryptionHelperTest {
 
             return true;
         }));
-    }
-
-    private List<String> subListExcludingLast(List<String> input) {
-        return input.subList(0, input.size() - 1);
     }
 
     @Test
