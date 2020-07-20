@@ -35,10 +35,10 @@ import java.util.List;
 @DisplayName("VaultEncryptionHelper")
 class VaultEncryptionHelperTest {
 
-    private static final String ENCRYPTED_FILE_PATH = "encryption/encrypted_key_file.txt";
+    private static final String ENCRYPT_STRING_1_1_FORMAT = "ansible-vault/encrypt_string_1.1.txt";
 
     // This is the variable name in the above encrypted file
-    private static final String VARIABLE_NAME = "VaultSecret";
+    private static final String VARIABLE_NAME = "db_password";
 
     @TempDir
     Path folder;
@@ -66,7 +66,7 @@ class VaultEncryptionHelperTest {
         var value = "test-encrypt";
         doReturn(value).when(helper).executeVaultCommand(any(OsCommand.class));
 
-        var encryptedString = Fixtures.fixture(ENCRYPTED_FILE_PATH);
+        var encryptedString = Fixtures.fixture(ENCRYPT_STRING_1_1_FORMAT);
         var decryptedValue = helper.decryptString(encryptedString, configuration);
 
         assertThat(decryptedValue).isEqualTo(value);
@@ -100,7 +100,7 @@ class VaultEncryptionHelperTest {
     @Test
     void encryptString() {
         var plainText = "test value";
-        var encryptedFixtureValue = Fixtures.fixture(ENCRYPTED_FILE_PATH);
+        var encryptedFixtureValue = Fixtures.fixture(ENCRYPT_STRING_1_1_FORMAT);
 
         doReturn(encryptedFixtureValue).when(helper).executeVaultCommand(any(OsCommand.class));
 
@@ -122,7 +122,7 @@ class VaultEncryptionHelperTest {
         var encryptedValue = "oogabooga";
         var osCommandMock = mock(OsCommand.class);
         var processMock = mock(Process.class);
-        doReturn(processMock).when(helper).getProcess(any(OsCommand.class));
+        doReturn(processMock).when(helper).launchProcess(any(OsCommand.class));
 
         var inputStream = new ByteArrayInputStream(encryptedValue.getBytes(StandardCharsets.UTF_8));
         when(processMock.getInputStream()).thenReturn(inputStream);
@@ -137,7 +137,7 @@ class VaultEncryptionHelperTest {
         var osCommandMock = mock(OsCommand.class);
         var processMock = mock(Process.class);
         var inputStreamMock = mock(InputStream.class);
-        doReturn(processMock).when(helper).getProcess(any(OsCommand.class));
+        doReturn(processMock).when(helper).launchProcess(any(OsCommand.class));
 
         when(processMock.getInputStream()).thenReturn(inputStreamMock);
         when(inputStreamMock.transferTo(any(OutputStream.class))).thenThrow(new IOException());
