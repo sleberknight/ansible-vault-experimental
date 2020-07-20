@@ -12,6 +12,7 @@ import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -35,13 +36,12 @@ public class VaultEncryptionHelper {
     public String decryptString(String encryptedString, VaultConfiguration configuration) {
         validateEncryptionConfiguration(configuration);
 
-        var secretFileDescriptor =
-                new VaultSecretFileDescriptor(encryptedString, Paths.get(configuration.getTempDirectory()));
-
-        var tempFilePath = secretFileDescriptor.getTempFilePath();
+        var encryptedVariable = new VaultEncryptedVariable(encryptedString);
+        var tempFilePath = encryptedVariable.generateRandomFilePath(configuration.getTempDirectory());
 
         try {
-            writeEncryptStringContentToTempFile(secretFileDescriptor);
+            createTempDirectoryIfNecessary(Path.of(configuration.getTempDirectory()));
+            writeEncryptStringContentToTempFile(encryptedVariable, tempFilePath);
             var osCommand = VaultDecryptCommand.from(configuration, tempFilePath.toString());
             return executeVaultCommand(osCommand);
         } catch (Exception e) {
@@ -63,26 +63,28 @@ public class VaultEncryptionHelper {
         return Files.exists(Paths.get(filePath));
     }
 
-    private void writeEncryptStringContentToTempFile(VaultSecretFileDescriptor fileDescriptor) {
-        createTemporaryDirectoriesIfNecessary(fileDescriptor.getTempDirectoryPath());
+    private void writeEncryptStringContentToTempFile(VaultEncryptedVariable encryptedVariable,
+                                                     Path tempFilePath) {
 
-        var tempFile = fileDescriptor.getTempFilePath().toFile();
-        var bytes = fileDescriptor.getPayloadToWrite().getBytes(StandardCharsets.UTF_8);
-
-        try (var outputStream = new BufferedOutputStream(new FileOutputStream(tempFile))) {
+        try (var outputStream = newBufferedOutputStream(tempFilePath)) {
+            var bytes = encryptedVariable.getEncryptedFileBytes();
             var inputStream = new BufferedInputStream(new ByteArrayInputStream(bytes));
-            LOG.trace("Payload to write ----{}{}", LINE_SEPARATOR, fileDescriptor.getPayloadToWrite());
+            LOG.trace("Payload to write ----{}{}", LINE_SEPARATOR, encryptedVariable.getEncryptedFileContent());
             LOG.trace("End payload ----");
 
             inputStream.transferTo(outputStream);
-            LOG.debug("Wrote temporary file containing encrypt_string content: {}", tempFile);
+            LOG.debug("Wrote temporary file containing encrypt_string content: {}", tempFilePath);
         } catch (IOException e) {
-            LOG.error("Error copying to temp file: " + tempFile, e);
+            LOG.error("Error copying to temp file: " + tempFilePath, e);
             throw new VaultEncryptionException("Error copying to temp file", e);
         }
     }
 
-    private static void createTemporaryDirectoriesIfNecessary(Path tempDirectoryPath) {
+    private BufferedOutputStream newBufferedOutputStream(Path tempFilePath) throws FileNotFoundException {
+        return new BufferedOutputStream(new FileOutputStream(tempFilePath.toFile()));
+    }
+
+    private static void createTempDirectoryIfNecessary(Path tempDirectoryPath) {
         try {
             Files.createDirectories(tempDirectoryPath);
         } catch (IOException e) {
@@ -104,7 +106,7 @@ public class VaultEncryptionHelper {
     @VisibleForTesting
     String executeVaultCommand(OsCommand osCommand) {
         LOG.debug("Ansible command: {}", lazy(osCommand::getCommandParts));
-        var vaultProcess = getProcess(osCommand);
+        var vaultProcess = launchProcess(osCommand);
         return readProcessOutputAsString(vaultProcess);
     }
 
@@ -119,7 +121,7 @@ public class VaultEncryptionHelper {
     }
 
     @VisibleForTesting
-    Process getProcess(OsCommand command) {
+    Process launchProcess(OsCommand command) {
         return new ProcessHelper().launch(command.getCommandParts());
     }
 }

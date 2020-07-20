@@ -20,9 +20,11 @@ public class Main {
         var ansibleVaultExecPath = Path.of(separator, "usr", "local", "bin", "ansible-vault");
 
         // Use files in this project (in src/main/resources)
-        var vaultPasswordPath = Path.of(".", "src", "main", "resources", "encryption", ".vault_pass");
-        var tempPath = Path.of(".", "src", "main", "resources", "encryption", "temp");
-        var encryptedPath = Path.of(".", "src", "main", "resources", "encryption", "encrypted_key_file.txt");
+//        var fileName = "encrypt_string_1.1.txt";
+        var fileName = "encrypt_string_1.2.txt";
+        var vaultPasswordPath = Path.of(".", "src", "main", "resources", "ansible-vault", ".vault_pass");
+        var tempPath = Path.of(".", "src", "main", "resources", "ansible-vault", "temp");
+        var encryptedPath = Path.of(".", "src", "main", "resources", "ansible-vault", fileName);
 
         // Use files in /tmp/vault-play
 //        var vaultPasswordPath = Path.of(separator, "tmp", "vault-play", ".vault_pass");
