@@ -31,6 +31,8 @@ import java.nio.file.Path;
 // so we need to think about how/if we can make it better. Could we detect if ansible-vault
 // is available, or assume a known location and if present use it and test using the
 // actual command?
+//
+// TODO How can this be improved so as not to mock too much but without needing ansible-vault installed?
 
 @DisplayName("VaultEncryptionHelper")
 class VaultEncryptionHelperTest {
