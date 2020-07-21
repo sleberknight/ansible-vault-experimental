@@ -3,6 +3,9 @@ package org.example.ansible.vault;
 import static java.util.stream.Collectors.toUnmodifiableList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
+import static org.junit.jupiter.api.condition.OS.LINUX;
+import static org.junit.jupiter.api.condition.OS.MAC;
+import static org.junit.jupiter.api.condition.OS.SOLARIS;
 
 import org.example.ansible.vault.testing.Fixtures;
 import org.junit.jupiter.api.BeforeEach;
@@ -11,7 +14,6 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledOnOs;
-import org.junit.jupiter.api.condition.OS;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -30,7 +32,7 @@ class VaultEncryptedVariableTest {
      * (limitation is because Java requires a constant value in annotation values)
      */
     @Nested
-    @EnabledOnOs({OS.LINUX, OS.MAC, OS.SOLARIS})
+    @EnabledOnOs({LINUX, MAC, SOLARIS})
     class Constructor {
 
         @Nested

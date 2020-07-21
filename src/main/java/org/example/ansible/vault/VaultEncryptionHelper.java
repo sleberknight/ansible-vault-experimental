@@ -27,12 +27,18 @@ public class VaultEncryptionHelper {
 
     private static final String LINE_SEPARATOR = System.lineSeparator();
 
+    /**
+     * Wraps the ansible-vault encrypt_string command.
+     */
     public String encryptString(String plainText, String variableName, VaultConfiguration configuration) {
         validateEncryptionConfiguration(configuration);
         var osCommand = VaultEncryptStringCommand.from(configuration, plainText, variableName);
         return executeVaultCommand(osCommand);
     }
 
+    /**
+     * Decrypts an encrypted string variable formatted using encrypt_string with a --name option.
+     */
     public String decryptString(String encryptedString, VaultConfiguration configuration) {
         validateEncryptionConfiguration(configuration);
 
@@ -66,6 +72,7 @@ public class VaultEncryptionHelper {
     private void writeEncryptStringContentToTempFile(VaultEncryptedVariable encryptedVariable,
                                                      Path tempFilePath) {
 
+        // TODO Why don't we just use Files.writeString or Files.write???
         try (var outputStream = newBufferedOutputStream(tempFilePath)) {
             var bytes = encryptedVariable.getEncryptedFileBytes();
             var inputStream = new BufferedInputStream(new ByteArrayInputStream(bytes));
