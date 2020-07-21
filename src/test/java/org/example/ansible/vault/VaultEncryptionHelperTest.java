@@ -1,10 +1,14 @@
 package org.example.ansible.vault;
 
+import static java.util.Objects.isNull;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.example.ansible.vault.Utils.subListExcludingLast;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
@@ -14,10 +18,13 @@ import static org.mockito.Mockito.when;
 import org.example.ansible.vault.testing.Fixtures;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.kiwiproject.base.process.ProcessHelper;
 import org.kiwiproject.collect.KiwiLists;
 
+import javax.annotation.Nullable;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -25,6 +32,8 @@ import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
 // Notes:
 // This original test mocks a lot (specifically the actual ansible-vault commands)
@@ -50,9 +59,9 @@ class VaultEncryptionHelperTest {
 
     @BeforeEach
     void setUp() throws IOException {
-        var passwordFilePath = Files.createFile(Path.of(folder.toString(), ".vault_pass.txt"));
         var vaultFilePath = Files.createFile(Path.of(folder.toString(), "ansible-vault"));
-        Files.writeString(passwordFilePath, "test");
+        var passwordFilePath = Files.createFile(Path.of(folder.toString(), ".vault_pass.txt"));
+        Files.writeString(passwordFilePath, "password100");
 
         configuration = VaultConfiguration.builder()
                 .ansibleVaultPath(vaultFilePath.toString())
@@ -66,14 +75,14 @@ class VaultEncryptionHelperTest {
     @Test
     void decryptString() {
         var value = "test-encrypt";
-        doReturn(value).when(helper).executeVaultCommand(any(OsCommand.class));
+        doReturn(value).when(helper).executeVaultCommandReturningStdout(any(OsCommand.class));
 
         var encryptedString = Fixtures.fixture(ENCRYPT_STRING_1_1_FORMAT);
         var decryptedValue = helper.decryptString(encryptedString, configuration);
 
         assertThat(decryptedValue).isEqualTo(value);
 
-        verify(helper).executeVaultCommand(argThat(osCommand -> {
+        verify(helper).executeVaultCommandReturningStdout(argThat(osCommand -> {
             // Check command up until last argument (file name)
             var encryptedFilePath = Path.of(folder.toString(), VARIABLE_NAME + ".txt");
             var vaultDecryptCommandParts =
@@ -100,13 +109,13 @@ class VaultEncryptionHelperTest {
         var plainText = "test value";
         var encryptedFixtureValue = Fixtures.fixture(ENCRYPT_STRING_1_1_FORMAT);
 
-        doReturn(encryptedFixtureValue).when(helper).executeVaultCommand(any(OsCommand.class));
+        doReturn(encryptedFixtureValue).when(helper).executeVaultCommandReturningStdout(any(OsCommand.class));
 
         var encryptedValue = helper.encryptString(plainText, VARIABLE_NAME, configuration);
 
         assertThat(encryptedValue).isEqualTo(encryptedFixtureValue);
 
-        verify(helper).executeVaultCommand(argThat(osCommand -> {
+        verify(helper).executeVaultCommandReturningStdout(argThat(osCommand -> {
             var expectedCommandParts = VaultEncryptStringCommand.from(configuration, plainText, VARIABLE_NAME).getCommandParts();
             assertThat(osCommand.getCommandParts())
                     .isEqualTo(expectedCommandParts);
@@ -122,10 +131,10 @@ class VaultEncryptionHelperTest {
         var processMock = mock(Process.class);
         doReturn(processMock).when(helper).launchProcess(any(OsCommand.class));
 
-        var inputStream = new ByteArrayInputStream(encryptedValue.getBytes(StandardCharsets.UTF_8));
+        var inputStream = newInputStream(encryptedValue);
         when(processMock.getInputStream()).thenReturn(inputStream);
 
-        var mySecret = helper.executeVaultCommand(osCommandMock);
+        var mySecret = helper.executeVaultCommandReturningStdout(osCommandMock);
 
         assertThat(mySecret).isEqualTo(encryptedValue);
     }
@@ -141,10 +150,88 @@ class VaultEncryptionHelperTest {
         when(inputStreamMock.transferTo(any(OutputStream.class))).thenThrow(new IOException());
 
         assertThatThrownBy(() ->
-                helper.executeVaultCommand(osCommandMock))
+                helper.executeVaultCommandReturningStdout(osCommandMock))
                 .isExactlyInstanceOf(VaultEncryptionException.class)
                 .hasCauseExactlyInstanceOf(IOException.class)
-                .hasMessageStartingWith("Error transferring process output to string");
+                .hasMessageStartingWith("Error converting InputStream to String");
+    }
+
+    @Nested
+    class EncryptFile {
+
+        private VaultEncryptionHelper helper;
+        private ProcessHelper processHelper;
+        private Process process;
+
+        @BeforeEach
+        void setUp() {
+            processHelper = mock(ProcessHelper.class);
+            process = mock(Process.class);
+            helper = new VaultEncryptionHelper(processHelper);
+        }
+
+        @Test
+        void shouldReturnEncryptedPath_WhenSuccessful() {
+            mockOsProcess(processHelper, process, 0, null, "Encryption successful");
+
+            var plainTextFile = "/data/etc/secrets.yml";
+
+            var encryptedFile = helper.encryptFile(plainTextFile, configuration);
+
+            assertThat(encryptedFile).isEqualTo(Path.of(plainTextFile));
+
+            var command = VaultEncryptCommand.from(configuration, plainTextFile);
+            verify(processHelper).launch(command.getCommandParts());
+        }
+
+        @Test
+        void shouldThrowException_WhenExitCodeIsNonZero() {
+            var errorOutput = "ERROR! input is already encrypted";
+            mockOsProcess(processHelper, process, 1, null, errorOutput);
+
+            var plainTextFile = "/data/etc/secrets.yml.enc";
+
+            assertThatThrownBy(() -> helper.encryptFile(plainTextFile, configuration))
+                    .isExactlyInstanceOf(VaultEncryptionException.class)
+                    .hasMessage("ansible-vault returned non-zero exit code 1. Stderr: %s", errorOutput);
+
+            var command = VaultEncryptCommand.from(configuration, plainTextFile);
+            verify(processHelper).launch(command.getCommandParts());
+        }
+    }
+
+    // Things this method mocks:
+    //
+    // mockProcessHelper:
+    // launch (returns mockProcess)
+    // waitForExit (return Optional<exitCode>)
+    //
+    // mockProcess:
+    // getInputStream
+    // getErrorStream
+    private static void mockOsProcess(ProcessHelper mockProcessHelper,
+                                      Process mockProcess,
+                                      @Nullable Integer exitCode,
+                                      @Nullable String stdOutput,
+                                      @Nullable String errorOutput) {
+
+        when(mockProcessHelper.launch(anyList())).thenReturn(mockProcess);
+        when(mockProcessHelper.waitForExit(same(mockProcess), anyLong(), any(TimeUnit.class)))
+                .thenReturn(Optional.ofNullable(exitCode));
+
+        var stdOutInputStream = newInputStream(stdOutput);
+        when(mockProcess.getInputStream()).thenReturn(stdOutInputStream);
+
+        var errorInputStream = newInputStream(errorOutput);
+        when(mockProcess.getErrorStream()).thenReturn(errorInputStream);
+    }
+
+    private static InputStream newInputStream(@Nullable String value) {
+        if (isNull(value)) {
+            return InputStream.nullInputStream();
+        }
+
+        return new ByteArrayInputStream(value.getBytes(StandardCharsets.UTF_8));
     }
 
 }

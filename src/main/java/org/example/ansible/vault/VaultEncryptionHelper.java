@@ -1,6 +1,8 @@
 package org.example.ansible.vault;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static org.apache.commons.lang3.StringUtils.isBlank;
+import static org.kiwiproject.base.KiwiStrings.f;
 import static org.kiwiproject.base.KiwiStrings.format;
 import static org.kiwiproject.logging.LazyLogParameterSupplier.lazy;
 
@@ -12,14 +14,19 @@ import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.concurrent.TimeUnit;
+
+// TODO need to check error stream, exit code, timeouts, etc. on processes!
 
 @Slf4j
 @SuppressWarnings({"java:S125"})
@@ -27,13 +34,53 @@ public class VaultEncryptionHelper {
 
     private static final String LINE_SEPARATOR = System.lineSeparator();
 
+    private static final int DEFAULT_TIMEOUT = 10;
+    private static final TimeUnit DEFAULT_TIMEOUT_UNIT = TimeUnit.SECONDS;
+
+    private final ProcessHelper processHelper;
+
+    public VaultEncryptionHelper() {
+        this(new ProcessHelper());
+    }
+
+    @VisibleForTesting
+    VaultEncryptionHelper(ProcessHelper processHelper) {
+        this.processHelper = processHelper;
+    }
+
+    /**
+     * Wraps the ansible-vault encrypt command.
+     */
+    public Path encryptFile(String plainTextFilePath, VaultConfiguration configuration) {
+        validateEncryptionConfiguration(configuration);
+
+        var osCommand = VaultEncryptCommand.from(configuration, plainTextFilePath);
+        LOG.debug("Ansible command: {}", lazy(osCommand::getCommandParts));
+
+        var vaultProcess = processHelper.launch(osCommand.getCommandParts());
+        var exitCode = processHelper.waitForExit(vaultProcess, DEFAULT_TIMEOUT, DEFAULT_TIMEOUT_UNIT)
+                .orElseThrow(() -> new VaultEncryptionException("ansible-vault did not exit before timeout"));
+        LOG.debug("ansible-vault exit code: {}", exitCode);
+
+        if (exitCode != 0) {
+            var rawErrorOutput = readProcessErrorOutput(vaultProcess);
+            var errorOutput = isBlank(rawErrorOutput) ? "[no stderr]" : rawErrorOutput.trim();
+            LOG.debug("Error output: [{}]", errorOutput);
+
+            var message = f("ansible-vault returned non-zero exit code {}. Stderr: {}", exitCode, errorOutput);
+            throw new VaultEncryptionException(message);
+        }
+
+        return new File(plainTextFilePath).toPath();
+    }
+
     /**
      * Wraps the ansible-vault encrypt_string command.
      */
     public String encryptString(String plainText, String variableName, VaultConfiguration configuration) {
         validateEncryptionConfiguration(configuration);
         var osCommand = VaultEncryptStringCommand.from(configuration, plainText, variableName);
-        return executeVaultCommand(osCommand);
+        return executeVaultCommandReturningStdout(osCommand);
     }
 
     /**
@@ -49,7 +96,7 @@ public class VaultEncryptionHelper {
             createTempDirectoryIfNecessary(Path.of(configuration.getTempDirectory()));
             writeEncryptStringContentToTempFile(encryptedVariable, tempFilePath);
             var osCommand = VaultDecryptCommand.from(configuration, tempFilePath.toString());
-            return executeVaultCommand(osCommand);
+            return executeVaultCommandReturningStdout(osCommand);
         } catch (Exception e) {
             LOG.error("Error decrypting", e);
             throw e;
@@ -58,6 +105,7 @@ public class VaultEncryptionHelper {
         }
     }
 
+    // TODO Move into VaultConfiguration as a static 'validate' method?
     private static void validateEncryptionConfiguration(VaultConfiguration configuration) {
         checkArgument(doesPathExist(configuration.getVaultPasswordFilePath()),
                 "vault password file does not exist: {}", configuration.getVaultPasswordFilePath());
@@ -111,24 +159,32 @@ public class VaultEncryptionHelper {
     }
 
     @VisibleForTesting
-    String executeVaultCommand(OsCommand osCommand) {
+    String executeVaultCommandReturningStdout(OsCommand osCommand) {
         LOG.debug("Ansible command: {}", lazy(osCommand::getCommandParts));
         var vaultProcess = launchProcess(osCommand);
-        return readProcessOutputAsString(vaultProcess);
+        return readProcessOutput(vaultProcess);
     }
 
-    String readProcessOutputAsString(Process encryptionProcess) {
+    String readProcessOutput(Process process) {
+        return readInputStreamAsString(process.getInputStream());
+    }
+
+    String readProcessErrorOutput(Process process) {
+        return readInputStreamAsString(process.getErrorStream());
+    }
+
+    String readInputStreamAsString(InputStream inputStream) {
         try {
             var outputStream = new ByteArrayOutputStream();
-            encryptionProcess.getInputStream().transferTo(outputStream);
+            inputStream.transferTo(outputStream);
             return outputStream.toString(StandardCharsets.UTF_8);
         } catch (IOException e) {
-            throw new VaultEncryptionException("Error transferring process output to string ", e);
+            throw new VaultEncryptionException("Error converting InputStream to String", e);
         }
     }
 
     @VisibleForTesting
     Process launchProcess(OsCommand command) {
-        return new ProcessHelper().launch(command.getCommandParts());
+        return processHelper.launch(command.getCommandParts());
     }
 }

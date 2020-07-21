@@ -1,6 +1,7 @@
 package org.example.ansible.vault;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.junit.jupiter.api.condition.OS.LINUX;
 import static org.junit.jupiter.api.condition.OS.MAC;
@@ -10,6 +11,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledOnOs;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -36,7 +38,16 @@ class VaultEncryptionHelperIntegrationTest {
 
     private static final String PASSWORD = "password100";
 
+    // Cannot be final; set in @BeforeAll based on OS
     private static String ansibleVaultFile;
+
+    private VaultEncryptionHelper helper;
+    private VaultConfiguration config;
+
+    @TempDir
+    Path tempDirPath;
+
+    private String tempDir;
 
     @BeforeAll
     static void beforeAll() {
@@ -53,16 +64,10 @@ class VaultEncryptionHelperIntegrationTest {
         return Optional.empty();
     }
 
-    private VaultEncryptionHelper helper;
-    private VaultConfiguration config;
-
-    @TempDir
-    Path tempDirPath;
-
     @BeforeEach
     void setUp() throws IOException {
         helper = new VaultEncryptionHelper();
-        var tempDir = tempDirPath.toString();
+        tempDir = tempDirPath.toString();
 
         var passwordFilePath = Path.of(tempDir, ".vault_pass");
         Files.writeString(passwordFilePath, PASSWORD);
@@ -72,6 +77,42 @@ class VaultEncryptionHelperIntegrationTest {
                 .vaultPasswordFilePath(passwordFilePath.toString())
                 .tempDirectory(tempDir)
                 .build();
+    }
+
+    @Nested
+    class EncryptFile {
+
+        private Path plainTextFile;
+
+        @BeforeEach
+        void setUp() throws IOException {
+            plainTextFile = Files.writeString(Path.of(tempDir, "foo.txt"), "the plain text");
+        }
+
+        @Test
+        void shouldEncryptPlainTextFile() {
+            var encryptedFile = helper.encryptFile(plainTextFile.toString(), config);
+
+            assertThat(encryptedFile)
+                    .describedAs("Encrypted file path should be the same")
+                    .isEqualTo(plainTextFile);
+        }
+
+        @Test
+        void shouldThrowWhenGivenAlreadyEncryptedFile() {
+            var encryptedFile = helper.encryptFile(plainTextFile.toString(), config).toString();
+
+            assertThatThrownBy(() -> helper.encryptFile(encryptedFile, config))
+                    .isExactlyInstanceOf(VaultEncryptionException.class)
+                    .hasMessageStartingWith("ansible-vault returned non-zero exit code 1. Stderr: ");
+        }
+
+        @Test
+        void shouldThrowWhenGivenFilesThatDoesNotExist() {
+            assertThatThrownBy(() -> helper.encryptFile("/does/not/exist.txt", config))
+                    .isExactlyInstanceOf(VaultEncryptionException.class)
+                    .hasMessageStartingWith("ansible-vault returned non-zero exit code 1. Stderr: ");
+        }
     }
 
     @Nested
