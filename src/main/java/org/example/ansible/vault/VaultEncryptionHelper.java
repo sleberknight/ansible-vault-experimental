@@ -10,13 +10,8 @@ import com.google.common.annotations.VisibleForTesting;
 import lombok.extern.slf4j.Slf4j;
 import org.kiwiproject.base.process.ProcessHelper;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
@@ -49,7 +44,7 @@ public class VaultEncryptionHelper {
     }
 
     /**
-     * Wraps the ansible-vault encrypt command.
+     * Wraps the ansible-vault encrypt command. Encrypts file in place.
      */
     public Path encryptFile(String plainTextFilePath, VaultConfiguration configuration) {
         validateEncryptionConfiguration(configuration);
@@ -120,23 +115,16 @@ public class VaultEncryptionHelper {
     private void writeEncryptStringContentToTempFile(VaultEncryptedVariable encryptedVariable,
                                                      Path tempFilePath) {
 
-        // TODO Why don't we just use Files.writeString or Files.write???
-        try (var outputStream = newBufferedOutputStream(tempFilePath)) {
-            var bytes = encryptedVariable.getEncryptedFileBytes();
-            var inputStream = new BufferedInputStream(new ByteArrayInputStream(bytes));
-            LOG.trace("Payload to write ----{}{}", LINE_SEPARATOR, encryptedVariable.getEncryptedFileContent());
-            LOG.trace("End payload ----");
+        try {
+            LOG.trace("Payload to write ----{}{}{}----- End payload ----",
+                    LINE_SEPARATOR, encryptedVariable.getEncryptedFileContent(), LINE_SEPARATOR);
 
-            inputStream.transferTo(outputStream);
+            Files.write(tempFilePath, encryptedVariable.getEncryptedFileBytes());
             LOG.debug("Wrote temporary file containing encrypt_string content: {}", tempFilePath);
         } catch (IOException e) {
-            LOG.error("Error copying to temp file: " + tempFilePath, e);
+            LOG.error("Error writing temp file: " + tempFilePath, e);
             throw new VaultEncryptionException("Error copying to temp file", e);
         }
-    }
-
-    private BufferedOutputStream newBufferedOutputStream(Path tempFilePath) throws FileNotFoundException {
-        return new BufferedOutputStream(new FileOutputStream(tempFilePath.toFile()));
     }
 
     private static void createTempDirectoryIfNecessary(Path tempDirectoryPath) {
