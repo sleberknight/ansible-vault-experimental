@@ -5,19 +5,17 @@ import lombok.Builder;
 import java.util.List;
 
 @Builder
-public class VaultEncryptStringCommand implements OsCommand {
+public class VaultEncryptCommand implements OsCommand {
 
     private final String ansibleVaultPath;
     private final String vaultPasswordFilePath;
-    private final String variableName;
-    private final String plainText;
+    private final String plainTextFilePath;
 
-    public static OsCommand from(VaultConfiguration configuration, String plainText, String variableName) {
-        return VaultEncryptStringCommand.builder()
+    public static OsCommand from(VaultConfiguration configuration, String plainTextFilePath) {
+        return VaultEncryptCommand.builder()
                 .ansibleVaultPath(configuration.getAnsibleVaultPath())
                 .vaultPasswordFilePath(configuration.getVaultPasswordFilePath())
-                .variableName(variableName)
-                .plainText(plainText)
+                .plainTextFilePath(plainTextFilePath)
                 .build();
     }
 
@@ -25,10 +23,9 @@ public class VaultEncryptStringCommand implements OsCommand {
     public List<String> getCommandParts() {
         return List.of(
                 ansibleVaultPath,
-                "encrypt_string",
+                "encrypt",
                 "--vault-password-file", vaultPasswordFilePath,
-                "--name", variableName,
-                plainText
+                plainTextFilePath
         );
     }
 }

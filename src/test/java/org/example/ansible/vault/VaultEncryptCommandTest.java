@@ -6,33 +6,31 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-@DisplayName("VaultDecryptCommand")
-class VaultDecryptCommandTest {
+@DisplayName("VaultEncryptCommand")
+class VaultEncryptCommandTest {
 
     private VaultConfiguration configuration;
 
     @BeforeEach
     void setUp() {
         configuration = VaultConfiguration.builder()
-                .ansibleVaultPath("/opt/ansible/ansible-vault")
-                .vaultPasswordFilePath("~/.vault_pass")
-                .tempDirectory("/opt/ansible/tmp")
+                .ansibleVaultPath("/usr/bin/ansible-vault")
+                .vaultPasswordFilePath("~/.ansible/vault_pass")
                 .build();
     }
 
     @Test
     void shouldBuildCommand() {
-        var encryptedFilePath = "/data/secret/MySecret.txt";
-        var command = VaultDecryptCommand.from(configuration, encryptedFilePath);
+        var plainTextFileName = "/data/etc/secrets/passwords.txt";
+
+        var command = VaultEncryptCommand.from(configuration, plainTextFileName);
 
         assertThat(command.getCommandParts()).containsExactly(
                 configuration.getAnsibleVaultPath(),
-                "decrypt",
+                "encrypt",
                 "--vault-password-file",
                 configuration.getVaultPasswordFilePath(),
-                "--output",
-                "-",
-                encryptedFilePath
+                plainTextFileName
         );
     }
 }

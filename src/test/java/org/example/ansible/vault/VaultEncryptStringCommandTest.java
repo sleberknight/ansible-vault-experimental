@@ -28,11 +28,11 @@ class VaultEncryptStringCommandTest {
         assertThat(command.getCommandParts()).containsExactly(
                 configuration.getAnsibleVaultPath(),
                 "encrypt_string",
-                plainText,
                 "--vault-password-file",
                 configuration.getVaultPasswordFilePath(),
                 "--name",
-                variableName
+                variableName,
+                plainText
         );
     }
 }
