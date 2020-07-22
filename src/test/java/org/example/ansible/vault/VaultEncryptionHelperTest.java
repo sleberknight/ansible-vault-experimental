@@ -27,6 +27,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.kiwiproject.base.process.ProcessHelper;
 import org.kiwiproject.collect.KiwiLists;
+import org.mockito.ArgumentMatcher;
 
 import javax.annotation.Nullable;
 import java.io.ByteArrayInputStream;
@@ -36,17 +37,16 @@ import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
-// Notes:
-// This original test mocks a lot (specifically the actual ansible-vault commands)
-// so we need to think about how/if we can make it better. Could we detect if ansible-vault
-// is available, or assume a known location and if present use it and test using the
-// actual command?
-//
-// TODO How can this be improved so as not to mock too much but without needing ansible-vault installed?
-
+/**
+ * This test mocks out the actual ansible-vault invocations. It therefore tests everything except the
+ * actual ansible-vault command execution, which is OK for a unit test.
+ * <p>
+ * {@link VaultEncryptionHelperIntegrationTest} makes actual calls to ansible-vault, assuming it exists.
+ */
 @DisplayName("VaultEncryptionHelper")
 class VaultEncryptionHelperTest {
 
@@ -76,6 +76,7 @@ class VaultEncryptionHelperTest {
         helper = spy(VaultEncryptionHelper.class);
     }
 
+    @Disabled("in process of being replaced...")
     @Test
     void decryptString() {
         var value = "test-encrypt";
@@ -129,6 +130,7 @@ class VaultEncryptionHelperTest {
         }));
     }
 
+    @Disabled("in process of being replaced...")
     @Test
     void executeVaultCommand() {
         var encryptedValue = "oogabooga";
@@ -144,6 +146,7 @@ class VaultEncryptionHelperTest {
         assertThat(mySecret).isEqualTo(encryptedValue);
     }
 
+    @Disabled("in process of being replaced...")
     @Test
     void executeVaultCommand_Exception() throws IOException {
         var osCommandMock = mock(OsCommand.class);
@@ -362,9 +365,14 @@ class VaultEncryptionHelperTest {
 
             mockOsProcess(processHelper, process, 0, encryptedContent, "Encryption successful");
 
-            var result = helper.encryptString("this is the plain text", "some_variable", configuration);
+            var plainText = "this is the plain text";
+            var variableName = "some_variable";
+            var result = helper.encryptString(plainText, variableName, configuration);
 
             assertThat(result).isEqualTo(encryptedContent);
+
+            var command = VaultEncryptStringCommand.from(configuration, plainText, variableName);
+            verify(processHelper).launch(command.getCommandParts());
         }
 
         @Test
@@ -372,8 +380,84 @@ class VaultEncryptionHelperTest {
             var errorOutput = "ERROR! input is already encrypted";
             mockOsProcess(processHelper, process, 1, null, errorOutput);
 
+            var plainText = "my-password";
+            var variableName = "db_password";
             assertThatThrownBy(() ->
-                    helper.encryptString("my-password", "db_password", configuration))
+                    helper.encryptString(plainText, variableName, configuration))
+                    .isExactlyInstanceOf(VaultEncryptionException.class)
+                    .hasMessage("ansible-vault returned non-zero exit code 1. Stderr: %s", errorOutput);
+
+            var command = VaultEncryptStringCommand.from(configuration, plainText, variableName);
+            verify(processHelper).launch(command.getCommandParts());
+        }
+    }
+
+    @Nested
+    class DecryptString {
+
+        private VaultEncryptionHelper helper;
+        private ProcessHelper processHelper;
+        private Process process;
+
+        @BeforeEach
+        void setUp() {
+            processHelper = mock(ProcessHelper.class);
+            process = mock(Process.class);
+            helper = new VaultEncryptionHelper(processHelper);
+        }
+
+        @Test
+        void shouldDecryptEncryptedVariable_WhenSuccessful() {
+            var plainText = "secret sauce";
+            mockOsProcess(processHelper, process, 0, plainText, "Decryption successful");
+
+            var encryptedString = Fixtures.fixture("ansible-vault/encrypt_string_1.1.txt");
+
+            var result = helper.decryptString(encryptedString, configuration);
+
+            assertThat(result).isEqualTo(plainText);
+
+            var encryptedFilePath = Path.of(folder.toString(), VARIABLE_NAME + ".txt");
+
+            // Verify the command that was launched. This is more difficult here due to
+            // the way we need to write the encrypt_string content to a temporary file
+            // which has a random component in its name to avoid possibility of file name
+            // collisions.
+            verify(processHelper).launch(argThat(matchesExpectedCommand(encryptedFilePath)));
+        }
+
+        private ArgumentMatcher<List<String>> matchesExpectedCommand(Path encryptedFilePath) {
+            return (List<String> commandParts) -> {
+                // Check command up until last argument (file name, which has a random component)
+                var vaultDecryptCommand = VaultDecryptCommand.toStdoutFrom(configuration, encryptedFilePath.toString());
+                var vaultDecryptCommandParts = vaultDecryptCommand.getCommandParts();
+                var expectedPartsExcludingLast = subListExcludingLast(vaultDecryptCommandParts);
+
+                var commandPartsExcludingLast = subListExcludingLast(commandParts);
+
+                assertThat(commandPartsExcludingLast)
+                        .describedAs("Command until filename should be the same")
+                        .isEqualTo(expectedPartsExcludingLast);
+
+                // Check file name, but ignore the random numbers in the middle of it
+                var lastPart = KiwiLists.last(commandParts);
+                assertThat(lastPart)
+                        .describedAs("File name should start with %s end with .txt", VARIABLE_NAME)
+                        .startsWith(Path.of(folder.toString(), VARIABLE_NAME + ".").toString())
+                        .endsWith(".txt");
+
+                return true;
+            };
+        }
+
+        @Test
+        void shouldThrowException_WhenExitCodeIsNonZero() {
+            var errorOutput = "ERROR! input is already encrypted";
+            mockOsProcess(processHelper, process, 1, null, errorOutput);
+
+            var encryptedString = Fixtures.fixture("ansible-vault/encrypt_string_1.1.txt");
+
+            assertThatThrownBy(() -> helper.decryptString(encryptedString, configuration))
                     .isExactlyInstanceOf(VaultEncryptionException.class)
                     .hasMessage("ansible-vault returned non-zero exit code 1. Stderr: %s", errorOutput);
         }

@@ -143,7 +143,7 @@ public class VaultEncryptionHelper {
             createTempDirectoryIfNecessary(Path.of(configuration.getTempDirectory()));
             writeEncryptStringContentToTempFile(encryptedVariable, tempFilePath);
             var osCommand = VaultDecryptCommand.toStdoutFrom(configuration, tempFilePath.toString());
-            return executeVaultCommandReturningStdoutOld(osCommand);
+            return executeVaultCommandReturningStdout(osCommand);
         } catch (Exception e) {
             LOG.error("Error decrypting", e);
             throw e;
