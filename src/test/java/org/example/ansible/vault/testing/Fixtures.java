@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 
 public class Fixtures {
@@ -17,6 +18,15 @@ public class Fixtures {
             return Files.readString(path, StandardCharsets.UTF_8);
         } catch (URISyntaxException | IOException e) {
             throw new RuntimeException("Error reading fixture: " + resourceName, e);
+        }
+    }
+
+    public static Path fixturePath(String resourceName) {
+        @SuppressWarnings("UnstableApiUsage") var url = Resources.getResource(resourceName);
+        try {
+            return Paths.get(url.toURI());
+        } catch (URISyntaxException e) {
+            throw new RuntimeException("Error getting path of fixture: " + resourceName, e);
         }
     }
 }
