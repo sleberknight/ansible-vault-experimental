@@ -40,6 +40,8 @@ class VaultEncryptionHelperIntegrationTest {
 
     private static final String PASSWORD = "password100";
 
+    private static final String THE_SECRET = "Remember to drink your Ovaltine";
+
     // Cannot be final; set in @BeforeAll based on OS
     private static String ansibleVaultFile;
 
@@ -141,7 +143,7 @@ class VaultEncryptionHelperIntegrationTest {
 
                 var decryptedContents = Files.readString(decryptedFile, StandardCharsets.UTF_8);
 
-                assertThat(decryptedContents).isEqualToNormalizingWhitespace("Remember to drink your Ovaltine");
+                assertThat(decryptedContents).isEqualToNormalizingWhitespace(THE_SECRET);
             }
 
             @Test
@@ -184,7 +186,7 @@ class VaultEncryptionHelperIntegrationTest {
 
                 var decryptedContents = Files.readString(outputFilePath, StandardCharsets.UTF_8);
 
-                assertThat(decryptedContents).isEqualToNormalizingWhitespace("Remember to drink your Ovaltine");
+                assertThat(decryptedContents).isEqualToNormalizingWhitespace(THE_SECRET);
             }
 
             @Test
@@ -203,6 +205,51 @@ class VaultEncryptionHelperIntegrationTest {
                         .isExactlyInstanceOf(VaultEncryptionException.class)
                         .hasMessageStartingWith("ansible-vault returned non-zero exit code 1. Stderr: ");
             }
+        }
+    }
+
+    @Nested
+    class View {
+
+        private Path encryptedFile;
+
+        @BeforeEach
+        void setUp() throws IOException {
+            var encryptedResourceFile = Fixtures.fixturePath("ansible-vault/secret.txt");
+            encryptedFile = Files.copy(encryptedResourceFile, Path.of(tempDir, "secret.txt"));
+        }
+
+        @Test
+        void shouldViewEncryptedFile() {
+            var plainText = helper.viewFile(encryptedFile.toString(), config);
+
+            assertThat(plainText).isEqualToNormalizingWhitespace(THE_SECRET);
+        }
+
+        @Test
+        void shouldNotChangeEncryptedFile() throws IOException {
+            var originalEncryptedContent = Files.readString(encryptedFile, StandardCharsets.UTF_8);
+
+            helper.viewFile(encryptedFile.toString(), config);
+
+            assertThat(encryptedFile).hasContent(originalEncryptedContent);
+        }
+
+        @Test
+        void shouldThrowWhenGivenAnUnencryptedFile() throws IOException {
+            var plainTextFile = Files.writeString(Path.of(tempDir, "foo.txt"), "some plain text")
+                    .toString();
+
+            assertThatThrownBy(() -> helper.viewFile(plainTextFile, config))
+                    .isExactlyInstanceOf(VaultEncryptionException.class)
+                    .hasMessageStartingWith("ansible-vault returned non-zero exit code 1. Stderr: ");
+        }
+
+        @Test
+        void shouldThrowWhenGivenFileThatDoesNotExist() {
+            assertThatThrownBy(() -> helper.viewFile("/does/not/exist.txt", config))
+                    .isExactlyInstanceOf(VaultEncryptionException.class)
+                    .hasMessageStartingWith("ansible-vault returned non-zero exit code 1. Stderr: ");
         }
     }
 

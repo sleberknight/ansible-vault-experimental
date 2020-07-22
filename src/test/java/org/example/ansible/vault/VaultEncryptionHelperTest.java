@@ -78,14 +78,14 @@ class VaultEncryptionHelperTest {
     @Test
     void decryptString() {
         var value = "test-encrypt";
-        doReturn(value).when(helper).executeVaultCommandReturningStdout(any(OsCommand.class));
+        doReturn(value).when(helper).executeVaultCommandReturningStdoutOld(any(OsCommand.class));
 
         var encryptedString = Fixtures.fixture(ENCRYPT_STRING_1_1_FORMAT);
         var decryptedValue = helper.decryptString(encryptedString, configuration);
 
         assertThat(decryptedValue).isEqualTo(value);
 
-        verify(helper).executeVaultCommandReturningStdout(argThat(osCommand -> {
+        verify(helper).executeVaultCommandReturningStdoutOld(argThat(osCommand -> {
             // Check command up until last argument (file name)
             var encryptedFilePath = Path.of(folder.toString(), VARIABLE_NAME + ".txt");
             var vaultDecryptCommandParts =
@@ -112,13 +112,13 @@ class VaultEncryptionHelperTest {
         var plainText = "test value";
         var encryptedFixtureValue = Fixtures.fixture(ENCRYPT_STRING_1_1_FORMAT);
 
-        doReturn(encryptedFixtureValue).when(helper).executeVaultCommandReturningStdout(any(OsCommand.class));
+        doReturn(encryptedFixtureValue).when(helper).executeVaultCommandReturningStdoutOld(any(OsCommand.class));
 
         var encryptedValue = helper.encryptString(plainText, VARIABLE_NAME, configuration);
 
         assertThat(encryptedValue).isEqualTo(encryptedFixtureValue);
 
-        verify(helper).executeVaultCommandReturningStdout(argThat(osCommand -> {
+        verify(helper).executeVaultCommandReturningStdoutOld(argThat(osCommand -> {
             var expectedCommandParts = VaultEncryptStringCommand.from(configuration, plainText, VARIABLE_NAME).getCommandParts();
             assertThat(osCommand.getCommandParts())
                     .isEqualTo(expectedCommandParts);
@@ -137,7 +137,7 @@ class VaultEncryptionHelperTest {
         var inputStream = newInputStream(encryptedValue);
         when(processMock.getInputStream()).thenReturn(inputStream);
 
-        var mySecret = helper.executeVaultCommandReturningStdout(osCommandMock);
+        var mySecret = helper.executeVaultCommandReturningStdoutOld(osCommandMock);
 
         assertThat(mySecret).isEqualTo(encryptedValue);
     }
@@ -153,7 +153,7 @@ class VaultEncryptionHelperTest {
         when(inputStreamMock.transferTo(any(OutputStream.class))).thenThrow(new IOException());
 
         assertThatThrownBy(() ->
-                helper.executeVaultCommandReturningStdout(osCommandMock))
+                helper.executeVaultCommandReturningStdoutOld(osCommandMock))
                 .isExactlyInstanceOf(VaultEncryptionException.class)
                 .hasCauseExactlyInstanceOf(IOException.class)
                 .hasMessageStartingWith("Error converting InputStream to String");
@@ -239,7 +239,7 @@ class VaultEncryptionHelperTest {
                 var errorOutput = "ERROR! input is not vault encrypted data/etc/secrets.yml is not a vault encrypted file for /etc/secrets.yml";
                 mockOsProcess(processHelper, process, 1, null, errorOutput);
 
-                var encryptedFilePath = "/etc/secrets/yml";
+                var encryptedFilePath = "/etc/secrets.yml";
 
                 assertThatThrownBy(() -> helper.decryptFile(encryptedFilePath, configuration))
                         .isExactlyInstanceOf(VaultEncryptionException.class)
@@ -292,6 +292,51 @@ class VaultEncryptionHelperTest {
                         .isExactlyInstanceOf(VaultEncryptionException.class)
                         .hasMessage("ansible-vault returned non-zero exit code 1. Stderr: %s", errorOutput);
             }
+        }
+    }
+
+    @Nested
+    class ViewFile {
+
+        private VaultEncryptionHelper helper;
+        private ProcessHelper processHelper;
+        private Process process;
+
+        @BeforeEach
+        void setUp() {
+            processHelper = mock(ProcessHelper.class);
+            process = mock(Process.class);
+            helper = new VaultEncryptionHelper(processHelper);
+        }
+
+        @Test
+        void shouldReturnDecryptedContent_WhenSuccessful() {
+            var plainText = "the secret stash";
+            mockOsProcess(processHelper, process, 0, plainText, null);
+
+            var encryptedFile = "/data/etc/secrets.yml";
+
+            var decryptedContents = helper.viewFile(encryptedFile, configuration);
+
+            assertThat(decryptedContents).isEqualTo(plainText);
+
+            var command = VaultViewCommand.from(configuration, encryptedFile);
+            verify(processHelper).launch(command.getCommandParts());
+        }
+
+        @Test
+        void shouldThrowException_WhenExitCodeIsNonZero() {
+            var errorOutput = "ERROR! input is not vault encrypted data/etc/secrets.yml is not a vault encrypted file for /etc/secrets.yml";
+            mockOsProcess(processHelper, process, 1, null, errorOutput);
+
+            var encryptedFilePath = "/etc/secrets.yml";
+
+            assertThatThrownBy(() -> helper.viewFile(encryptedFilePath, configuration))
+                    .isExactlyInstanceOf(VaultEncryptionException.class)
+                    .hasMessage("ansible-vault returned non-zero exit code 1. Stderr: %s", errorOutput);
+
+            var command = VaultViewCommand.from(configuration, encryptedFilePath);
+            verify(processHelper).launch(command.getCommandParts());
         }
     }
 

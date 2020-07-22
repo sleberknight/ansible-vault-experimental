@@ -80,6 +80,26 @@ public class VaultEncryptionHelper {
     }
 
     private Path executeVaultCommandWithoutOutput(OsCommand osCommand, String filePath) {
+        executeVaultCommand(osCommand);
+        return new File(filePath).toPath();
+    }
+
+    /**
+     * Wraps ansible-vault view command. Returns the decrypted contents of the file.
+     * The original encrypted file is not modified.
+     */
+    public String viewFile(String encryptedFilePath, VaultConfiguration configuration) {
+        validateEncryptionConfiguration(configuration);
+        var osCommand = VaultViewCommand.from(configuration, encryptedFilePath);
+        return executeVaultCommandReturningStdout(osCommand);
+    }
+
+    private String executeVaultCommandReturningStdout(OsCommand osCommand) {
+        var vaultProcess = executeVaultCommand(osCommand);
+        return readProcessOutput(vaultProcess);
+    }
+
+    private Process executeVaultCommand(OsCommand osCommand) {
         LOG.debug("Ansible command: {}", lazy(osCommand::getCommandParts));
 
         var vaultProcess = processHelper.launch(osCommand.getCommandParts());
@@ -96,7 +116,7 @@ public class VaultEncryptionHelper {
             throw new VaultEncryptionException(message);
         }
 
-        return new File(filePath).toPath();
+        return vaultProcess;
     }
 
     /**
@@ -105,7 +125,7 @@ public class VaultEncryptionHelper {
     public String encryptString(String plainText, String variableName, VaultConfiguration configuration) {
         validateEncryptionConfiguration(configuration);
         var osCommand = VaultEncryptStringCommand.from(configuration, plainText, variableName);
-        return executeVaultCommandReturningStdout(osCommand);
+        return executeVaultCommandReturningStdoutOld(osCommand);
     }
 
     /**
@@ -123,7 +143,7 @@ public class VaultEncryptionHelper {
             createTempDirectoryIfNecessary(Path.of(configuration.getTempDirectory()));
             writeEncryptStringContentToTempFile(encryptedVariable, tempFilePath);
             var osCommand = VaultDecryptCommand.toStdoutFrom(configuration, tempFilePath.toString());
-            return executeVaultCommandReturningStdout(osCommand);
+            return executeVaultCommandReturningStdoutOld(osCommand);
         } catch (Exception e) {
             LOG.error("Error decrypting", e);
             throw e;
@@ -178,8 +198,9 @@ public class VaultEncryptionHelper {
         }
     }
 
+    // TODO Replace this with executeVaultCommandReturningStdout
     @VisibleForTesting
-    String executeVaultCommandReturningStdout(OsCommand osCommand) {
+    String executeVaultCommandReturningStdoutOld(OsCommand osCommand) {
         LOG.debug("Ansible command: {}", lazy(osCommand::getCommandParts));
         var vaultProcess = launchProcess(osCommand);
         return readProcessOutput(vaultProcess);
