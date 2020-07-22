@@ -18,6 +18,7 @@ import static org.mockito.Mockito.when;
 
 import org.example.ansible.vault.testing.Fixtures;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -107,6 +108,7 @@ class VaultEncryptionHelperTest {
         }));
     }
 
+    @Disabled("in process of being replaced...")
     @Test
     void encryptString() {
         var plainText = "test value";
@@ -337,6 +339,43 @@ class VaultEncryptionHelperTest {
 
             var command = VaultViewCommand.from(configuration, encryptedFilePath);
             verify(processHelper).launch(command.getCommandParts());
+        }
+    }
+
+    @Nested
+    class EncryptString {
+
+        private VaultEncryptionHelper helper;
+        private ProcessHelper processHelper;
+        private Process process;
+
+        @BeforeEach
+        void setUp() {
+            processHelper = mock(ProcessHelper.class);
+            process = mock(Process.class);
+            helper = new VaultEncryptionHelper(processHelper);
+        }
+
+        @Test
+        void shouldReturnEncryptedString_WhenSuccessful() {
+            var encryptedContent = Fixtures.fixture("ansible-vault/encrypt_string_1.1.txt");
+
+            mockOsProcess(processHelper, process, 0, encryptedContent, "Encryption successful");
+
+            var result = helper.encryptString("this is the plain text", "some_variable", configuration);
+
+            assertThat(result).isEqualTo(encryptedContent);
+        }
+
+        @Test
+        void shouldThrowException_WhenExitCodeIsNonZero() {
+            var errorOutput = "ERROR! input is already encrypted";
+            mockOsProcess(processHelper, process, 1, null, errorOutput);
+
+            assertThatThrownBy(() ->
+                    helper.encryptString("my-password", "db_password", configuration))
+                    .isExactlyInstanceOf(VaultEncryptionException.class)
+                    .hasMessage("ansible-vault returned non-zero exit code 1. Stderr: %s", errorOutput);
         }
     }
 

@@ -125,7 +125,7 @@ public class VaultEncryptionHelper {
     public String encryptString(String plainText, String variableName, VaultConfiguration configuration) {
         validateEncryptionConfiguration(configuration);
         var osCommand = VaultEncryptStringCommand.from(configuration, plainText, variableName);
-        return executeVaultCommandReturningStdoutOld(osCommand);
+        return executeVaultCommandReturningStdout(osCommand);
     }
 
     /**
