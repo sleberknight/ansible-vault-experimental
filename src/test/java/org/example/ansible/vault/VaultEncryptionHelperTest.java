@@ -2,6 +2,7 @@ package org.example.ansible.vault;
 
 import static java.util.Objects.isNull;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.example.ansible.vault.Utils.subListExcludingLast;
 import static org.mockito.ArgumentMatchers.any;
@@ -21,6 +22,8 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.kiwiproject.base.process.ProcessHelper;
 import org.kiwiproject.collect.KiwiLists;
 
@@ -263,6 +266,18 @@ class VaultEncryptionHelperTest {
 
                 var command = VaultDecryptCommand.from(configuration, encryptedFile, outputFile);
                 verify(processHelper).launch(command.getCommandParts());
+            }
+
+            @ParameterizedTest
+            @CsvSource({
+                    "/data/crypt/secrets.yml,/data/crypt/secrets.yml",
+                    "/data/crypt/secrets.yml,/data/crypt/Secrets.yml",
+                    "/data/crypt/secrets.yml,/data/crypt/SECRETS.yml"
+            })
+            void shouldNotPermitNewFileLocationToOverwriteEncryptedFile(String encryptedFile, String outputFile) {
+                assertThatIllegalArgumentException()
+                        .isThrownBy(() -> helper.decryptFile(encryptedFile, outputFile, configuration))
+                        .withMessage("outputFilePath must be different than encryptedFilePath (case-insensitive)");
             }
 
             @Test

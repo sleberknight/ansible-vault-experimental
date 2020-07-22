@@ -2,6 +2,7 @@ package org.example.ansible.vault;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static org.apache.commons.lang3.StringUtils.isBlank;
+import static org.kiwiproject.base.KiwiPreconditions.checkArgumentNotBlank;
 import static org.kiwiproject.base.KiwiStrings.f;
 import static org.kiwiproject.base.KiwiStrings.format;
 import static org.kiwiproject.logging.LazyLogParameterSupplier.lazy;
@@ -68,6 +69,9 @@ public class VaultEncryptionHelper {
     public Path decryptFile(String encryptedFilePath,
                             String outputFilePath,
                             VaultConfiguration configuration) {
+        checkArgument(!outputFilePath.equalsIgnoreCase(encryptedFilePath),
+                "outputFilePath must be different than encryptedFilePath (case-insensitive)");
+
         validateEncryptionConfiguration(configuration);
         var osCommand = VaultDecryptCommand.from(configuration, encryptedFilePath, outputFilePath);
         executeVaultCommandWithoutOutput(osCommand, encryptedFilePath);
@@ -109,6 +113,8 @@ public class VaultEncryptionHelper {
      */
     public String decryptString(String encryptedString, VaultConfiguration configuration) {
         validateEncryptionConfiguration(configuration);
+        checkArgumentNotBlank(configuration.getTempDirectory(),
+                "configuration.tempDirectory is required for decryptString");
 
         var encryptedVariable = new VaultEncryptedVariable(encryptedString);
         var tempFilePath = encryptedVariable.generateRandomFilePath(configuration.getTempDirectory());
