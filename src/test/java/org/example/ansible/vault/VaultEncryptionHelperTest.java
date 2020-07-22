@@ -214,33 +214,69 @@ class VaultEncryptionHelperTest {
             helper = new VaultEncryptionHelper(processHelper);
         }
 
-        @Test
-        void shouldReturnDecryptedPath_WhenSuccessful() {
-            mockOsProcess(processHelper, process, 0, null, "Decryption successful");
+        @Nested
+        class InPlace {
 
-            var encryptedFile = "/data/etc/secrets.yml";
+            @Test
+            void shouldReturnDecryptedPath_WhenSuccessful() {
+                mockOsProcess(processHelper, process, 0, null, "Decryption successful");
 
-            var decryptedFile = helper.decryptFile(encryptedFile, configuration);
+                var encryptedFile = "/data/etc/secrets.yml";
 
-            assertThat(decryptedFile).isEqualTo(Path.of(encryptedFile));
+                var decryptedFile = helper.decryptFile(encryptedFile, configuration);
 
-            var command = VaultDecryptCommand.from(configuration, encryptedFile);
-            verify(processHelper).launch(command.getCommandParts());
+                assertThat(decryptedFile).isEqualTo(Path.of(encryptedFile));
+
+                var command = VaultDecryptCommand.from(configuration, encryptedFile);
+                verify(processHelper).launch(command.getCommandParts());
+            }
+
+            @Test
+            void shouldThrowException_WhenExitCodeIsNonZero() {
+                var errorOutput = "ERROR! input is not vault encrypted data/etc/secrets.yml is not a vault encrypted file for /etc/secrets.yml";
+                mockOsProcess(processHelper, process, 1, null, errorOutput);
+
+                var encryptedFilePath = "/etc/secrets/yml";
+
+                assertThatThrownBy(() -> helper.decryptFile(encryptedFilePath, configuration))
+                        .isExactlyInstanceOf(VaultEncryptionException.class)
+                        .hasMessage("ansible-vault returned non-zero exit code 1. Stderr: %s", errorOutput);
+
+                var command = VaultDecryptCommand.from(configuration, encryptedFilePath);
+                verify(processHelper).launch(command.getCommandParts());
+            }
         }
 
-        @Test
-        void shouldThrowException_WhenExitCodeIsNonZero() {
-            var errorOutput = "ERROR! input is not vault encrypted data/etc/secrets.yml is not a vault encrypted file for /etc/secrets.yml";
-            mockOsProcess(processHelper, process, 1, null, errorOutput);
+        @Nested
+        class ToNewFile {
 
-            var encryptedFilePath = "/etc/secrets/yml";
+            @Test
+            void shouldReturnNewPath_WhenSuccessful() {
+                mockOsProcess(processHelper, process, 0, null, "Decryption successful");
 
-            assertThatThrownBy(() -> helper.decryptFile(encryptedFilePath, configuration))
-                    .isExactlyInstanceOf(VaultEncryptionException.class)
-                    .hasMessage("ansible-vault returned non-zero exit code 1. Stderr: %s", errorOutput);
+                var encryptedFile = "/data/crypt/secrets.yml";
+                var outputFile = "/data/var/secrets.yml";
 
-            var command = VaultDecryptCommand.from(configuration, encryptedFilePath);
-            verify(processHelper).launch(command.getCommandParts());
+                var decryptedFile = helper.decryptFile(encryptedFile, outputFile, configuration);
+
+                assertThat(decryptedFile).isEqualTo(Path.of(outputFile));
+
+                var command = VaultDecryptCommand.from(configuration, encryptedFile, outputFile);
+                verify(processHelper).launch(command.getCommandParts());
+            }
+
+            @Test
+            void shouldThrowException_WhenExitCodeIsNonZero() {
+                var errorOutput = "ERROR! input is not vault encrypted data/etc/secrets.yml is not a vault encrypted file for /etc/secrets.yml";
+                mockOsProcess(processHelper, process, 1, null, errorOutput);
+
+                var encryptedFile = "/data/crypt/secrets.yml";
+                var outputFile = "/data/var/secrets.yml";
+
+                assertThatThrownBy(() -> helper.decryptFile(encryptedFile, outputFile, configuration))
+                        .isExactlyInstanceOf(VaultEncryptionException.class)
+                        .hasMessage("ansible-vault returned non-zero exit code 1. Stderr: %s", errorOutput);
+            }
         }
     }
 

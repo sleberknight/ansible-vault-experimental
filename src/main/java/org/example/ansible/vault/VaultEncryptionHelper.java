@@ -61,6 +61,20 @@ public class VaultEncryptionHelper {
         return executeVaultCommandWithoutOutput(osCommand, encryptedFilePath);
     }
 
+    /**
+     * Wraps ansible-vault decrypt command. Decrypts file to a new specified output path.
+     * The original encrypted file is not modified.
+     */
+    public Path decryptFile(String encryptedFilePath,
+                            String outputFilePath,
+                            VaultConfiguration configuration) {
+        validateEncryptionConfiguration(configuration);
+        var osCommand = VaultDecryptCommand.from(configuration, encryptedFilePath, outputFilePath);
+        executeVaultCommandWithoutOutput(osCommand, encryptedFilePath);
+
+        return Path.of(outputFilePath);
+    }
+
     private Path executeVaultCommandWithoutOutput(OsCommand osCommand, String filePath) {
         LOG.debug("Ansible command: {}", lazy(osCommand::getCommandParts));
 

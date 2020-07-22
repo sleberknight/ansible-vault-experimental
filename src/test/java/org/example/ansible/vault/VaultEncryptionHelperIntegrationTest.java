@@ -128,34 +128,81 @@ class VaultEncryptionHelperIntegrationTest {
             encryptedFile = Files.copy(encryptedResourceFile, Path.of(tempDir, "secret.txt"));
         }
 
-        @Test
-        void shouldDecryptAnEncryptedFileInPlace() throws IOException {
-            var decryptedFile = helper.decryptFile(encryptedFile.toString(), config);
+        @Nested
+        class InPlace {
 
-            assertThat(decryptedFile)
-                    .describedAs("Decrypted file path should be the same")
-                    .isEqualTo(encryptedFile);
+            @Test
+            void shouldDecryptAnEncryptedFileInPlace() throws IOException {
+                var decryptedFile = helper.decryptFile(encryptedFile.toString(), config);
 
-            var decryptedContents = Files.readString(decryptedFile, StandardCharsets.UTF_8);
+                assertThat(decryptedFile)
+                        .describedAs("Decrypted file path should be the same")
+                        .isEqualTo(encryptedFile);
 
-            assertThat(decryptedContents).isEqualToNormalizingWhitespace("Remember to drink your Ovaltine");
+                var decryptedContents = Files.readString(decryptedFile, StandardCharsets.UTF_8);
+
+                assertThat(decryptedContents).isEqualToNormalizingWhitespace("Remember to drink your Ovaltine");
+            }
+
+            @Test
+            void shouldThrowWhenGivenAnUnencryptedFile() throws IOException {
+                var plainTextFile = Files.writeString(Path.of(tempDir, "foo.txt"), "some plain text")
+                        .toString();
+
+                assertThatThrownBy(() -> helper.decryptFile(plainTextFile, config))
+                        .isExactlyInstanceOf(VaultEncryptionException.class)
+                        .hasMessageStartingWith("ansible-vault returned non-zero exit code 1. Stderr: ");
+            }
+
+            @Test
+            void shouldThrowWhenGivenFileThatDoesNotExist() {
+                assertThatThrownBy(() -> helper.decryptFile("/does/not/exist.txt", config))
+                        .isExactlyInstanceOf(VaultEncryptionException.class)
+                        .hasMessageStartingWith("ansible-vault returned non-zero exit code 1. Stderr: ");
+            }
         }
 
-        @Test
-        void shouldThrowWhenGivenAnUnencryptedFile() throws IOException {
-            var plainTextFile = Files.writeString(Path.of(tempDir, "foo.txt"), "some plain text")
-                    .toString();
+        @Nested
+        class ToNewFile {
 
-            assertThatThrownBy(() -> helper.decryptFile(plainTextFile, config))
-                    .isExactlyInstanceOf(VaultEncryptionException.class)
-                    .hasMessageStartingWith("ansible-vault returned non-zero exit code 1. Stderr: ");
-        }
+            private Path outputFilePath;
+            private String outputFile;
 
-        @Test
-        void shouldThrowWhenGivenFileThatDoesNotExist() {
-            assertThatThrownBy(() -> helper.decryptFile("/does/not/exist.txt", config))
-                    .isExactlyInstanceOf(VaultEncryptionException.class)
-                    .hasMessageStartingWith("ansible-vault returned non-zero exit code 1. Stderr: ");
+            @BeforeEach
+            void setUp() {
+                outputFilePath = Path.of(tempDir, "new.txt");
+                outputFile = outputFilePath.toString();
+            }
+
+            @Test
+            void shouldDecryptAnEncryptedFileInPlace() throws IOException {
+                var decryptedFile = helper.decryptFile(encryptedFile.toString(), outputFile, config);
+
+                assertThat(decryptedFile)
+                        .describedAs("Decrypted file path should be the same")
+                        .isEqualTo(outputFilePath);
+
+                var decryptedContents = Files.readString(outputFilePath, StandardCharsets.UTF_8);
+
+                assertThat(decryptedContents).isEqualToNormalizingWhitespace("Remember to drink your Ovaltine");
+            }
+
+            @Test
+            void shouldThrowWhenGivenAnUnencryptedFile() throws IOException {
+                var plainTextFile = Files.writeString(Path.of(tempDir, "foo.txt"), "some plain text")
+                        .toString();
+
+                assertThatThrownBy(() -> helper.decryptFile(plainTextFile, outputFile, config))
+                        .isExactlyInstanceOf(VaultEncryptionException.class)
+                        .hasMessageStartingWith("ansible-vault returned non-zero exit code 1. Stderr: ");
+            }
+
+            @Test
+            void shouldThrowWhenGivenFileThatDoesNotExist() {
+                assertThatThrownBy(() -> helper.decryptFile("/does/not/exist.txt", outputFile, config))
+                        .isExactlyInstanceOf(VaultEncryptionException.class)
+                        .hasMessageStartingWith("ansible-vault returned non-zero exit code 1. Stderr: ");
+            }
         }
     }
 
