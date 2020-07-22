@@ -10,15 +10,12 @@ import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.same;
-import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import org.example.ansible.vault.testing.Fixtures;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -33,7 +30,6 @@ import javax.annotation.Nullable;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -60,6 +56,8 @@ class VaultEncryptionHelperTest {
 
     private VaultEncryptionHelper helper;
     private VaultConfiguration configuration;
+    private ProcessHelper processHelper;
+    private Process process;
 
     @BeforeEach
     void setUp() throws IOException {
@@ -73,110 +71,13 @@ class VaultEncryptionHelperTest {
                 .tempDirectory(folder.toString())
                 .build();
 
-        helper = spy(VaultEncryptionHelper.class);
-    }
-
-    @Disabled("in process of being replaced...")
-    @Test
-    void decryptString() {
-        var value = "test-encrypt";
-        doReturn(value).when(helper).executeVaultCommandReturningStdoutOld(any(OsCommand.class));
-
-        var encryptedString = Fixtures.fixture(ENCRYPT_STRING_1_1_FORMAT);
-        var decryptedValue = helper.decryptString(encryptedString, configuration);
-
-        assertThat(decryptedValue).isEqualTo(value);
-
-        verify(helper).executeVaultCommandReturningStdoutOld(argThat(osCommand -> {
-            // Check command up until last argument (file name)
-            var encryptedFilePath = Path.of(folder.toString(), VARIABLE_NAME + ".txt");
-            var vaultDecryptCommandParts =
-                    VaultDecryptCommand.toStdoutFrom(configuration, encryptedFilePath.toString()).getCommandParts();
-
-            var commandParts = osCommand.getCommandParts();
-            var partsExcludingLast = subListExcludingLast(commandParts);
-
-            var expectedPathsExcludingLast = subListExcludingLast(vaultDecryptCommandParts);
-            assertThat(partsExcludingLast).isEqualTo(expectedPathsExcludingLast);
-
-            // Check file name, but ignore the random numbers in the middle of it
-            var lastPath = KiwiLists.last(commandParts);
-            assertThat(lastPath)
-                    .startsWith(Path.of(folder.toString(), VARIABLE_NAME + ".").toString())
-                    .endsWith(".txt");
-
-            return true;
-        }));
-    }
-
-    @Disabled("in process of being replaced...")
-    @Test
-    void encryptString() {
-        var plainText = "test value";
-        var encryptedFixtureValue = Fixtures.fixture(ENCRYPT_STRING_1_1_FORMAT);
-
-        doReturn(encryptedFixtureValue).when(helper).executeVaultCommandReturningStdoutOld(any(OsCommand.class));
-
-        var encryptedValue = helper.encryptString(plainText, VARIABLE_NAME, configuration);
-
-        assertThat(encryptedValue).isEqualTo(encryptedFixtureValue);
-
-        verify(helper).executeVaultCommandReturningStdoutOld(argThat(osCommand -> {
-            var expectedCommandParts = VaultEncryptStringCommand.from(configuration, plainText, VARIABLE_NAME).getCommandParts();
-            assertThat(osCommand.getCommandParts())
-                    .isEqualTo(expectedCommandParts);
-
-            return true;
-        }));
-    }
-
-    @Disabled("in process of being replaced...")
-    @Test
-    void executeVaultCommand() {
-        var encryptedValue = "oogabooga";
-        var osCommandMock = mock(OsCommand.class);
-        var processMock = mock(Process.class);
-        doReturn(processMock).when(helper).launchProcess(any(OsCommand.class));
-
-        var inputStream = newInputStream(encryptedValue);
-        when(processMock.getInputStream()).thenReturn(inputStream);
-
-        var mySecret = helper.executeVaultCommandReturningStdoutOld(osCommandMock);
-
-        assertThat(mySecret).isEqualTo(encryptedValue);
-    }
-
-    @Disabled("in process of being replaced...")
-    @Test
-    void executeVaultCommand_Exception() throws IOException {
-        var osCommandMock = mock(OsCommand.class);
-        var processMock = mock(Process.class);
-        var inputStreamMock = mock(InputStream.class);
-        doReturn(processMock).when(helper).launchProcess(any(OsCommand.class));
-
-        when(processMock.getInputStream()).thenReturn(inputStreamMock);
-        when(inputStreamMock.transferTo(any(OutputStream.class))).thenThrow(new IOException());
-
-        assertThatThrownBy(() ->
-                helper.executeVaultCommandReturningStdoutOld(osCommandMock))
-                .isExactlyInstanceOf(VaultEncryptionException.class)
-                .hasCauseExactlyInstanceOf(IOException.class)
-                .hasMessageStartingWith("Error converting InputStream to String");
+        processHelper = mock(ProcessHelper.class);
+        process = mock(Process.class);
+        helper = new VaultEncryptionHelper(processHelper);
     }
 
     @Nested
     class EncryptFile {
-
-        private VaultEncryptionHelper helper;
-        private ProcessHelper processHelper;
-        private Process process;
-
-        @BeforeEach
-        void setUp() {
-            processHelper = mock(ProcessHelper.class);
-            process = mock(Process.class);
-            helper = new VaultEncryptionHelper(processHelper);
-        }
 
         @Test
         void shouldReturnEncryptedPath_WhenSuccessful() {
@@ -210,17 +111,6 @@ class VaultEncryptionHelperTest {
 
     @Nested
     class DecryptFile {
-
-        private VaultEncryptionHelper helper;
-        private ProcessHelper processHelper;
-        private Process process;
-
-        @BeforeEach
-        void setUp() {
-            processHelper = mock(ProcessHelper.class);
-            process = mock(Process.class);
-            helper = new VaultEncryptionHelper(processHelper);
-        }
 
         @Nested
         class InPlace {
@@ -303,17 +193,6 @@ class VaultEncryptionHelperTest {
     @Nested
     class ViewFile {
 
-        private VaultEncryptionHelper helper;
-        private ProcessHelper processHelper;
-        private Process process;
-
-        @BeforeEach
-        void setUp() {
-            processHelper = mock(ProcessHelper.class);
-            process = mock(Process.class);
-            helper = new VaultEncryptionHelper(processHelper);
-        }
-
         @Test
         void shouldReturnDecryptedContent_WhenSuccessful() {
             var plainText = "the secret stash";
@@ -348,20 +227,9 @@ class VaultEncryptionHelperTest {
     @Nested
     class EncryptString {
 
-        private VaultEncryptionHelper helper;
-        private ProcessHelper processHelper;
-        private Process process;
-
-        @BeforeEach
-        void setUp() {
-            processHelper = mock(ProcessHelper.class);
-            process = mock(Process.class);
-            helper = new VaultEncryptionHelper(processHelper);
-        }
-
         @Test
         void shouldReturnEncryptedString_WhenSuccessful() {
-            var encryptedContent = Fixtures.fixture("ansible-vault/encrypt_string_1.1.txt");
+            var encryptedContent = Fixtures.fixture(ENCRYPT_STRING_1_1_FORMAT);
 
             mockOsProcess(processHelper, process, 0, encryptedContent, "Encryption successful");
 
@@ -395,23 +263,12 @@ class VaultEncryptionHelperTest {
     @Nested
     class DecryptString {
 
-        private VaultEncryptionHelper helper;
-        private ProcessHelper processHelper;
-        private Process process;
-
-        @BeforeEach
-        void setUp() {
-            processHelper = mock(ProcessHelper.class);
-            process = mock(Process.class);
-            helper = new VaultEncryptionHelper(processHelper);
-        }
-
         @Test
         void shouldDecryptEncryptedVariable_WhenSuccessful() {
             var plainText = "secret sauce";
             mockOsProcess(processHelper, process, 0, plainText, "Decryption successful");
 
-            var encryptedString = Fixtures.fixture("ansible-vault/encrypt_string_1.1.txt");
+            var encryptedString = Fixtures.fixture(ENCRYPT_STRING_1_1_FORMAT);
 
             var result = helper.decryptString(encryptedString, configuration);
 
@@ -455,7 +312,7 @@ class VaultEncryptionHelperTest {
             var errorOutput = "ERROR! input is already encrypted";
             mockOsProcess(processHelper, process, 1, null, errorOutput);
 
-            var encryptedString = Fixtures.fixture("ansible-vault/encrypt_string_1.1.txt");
+            var encryptedString = Fixtures.fixture(ENCRYPT_STRING_1_1_FORMAT);
 
             assertThatThrownBy(() -> helper.decryptString(encryptedString, configuration))
                     .isExactlyInstanceOf(VaultEncryptionException.class)
