@@ -12,7 +12,9 @@ public class VaultEncryptStringCommand implements OsCommand {
     private final String variableName;
     private final String plainText;
 
-    public static OsCommand from(VaultConfiguration configuration, String plainText, String variableName) {
+    public static VaultEncryptStringCommand from(VaultConfiguration configuration,
+                                                 String plainText,
+                                                 String variableName) {
         return VaultEncryptStringCommand.builder()
                 .ansibleVaultPath(configuration.getAnsibleVaultPath())
                 .vaultPasswordFilePath(configuration.getVaultPasswordFilePath())

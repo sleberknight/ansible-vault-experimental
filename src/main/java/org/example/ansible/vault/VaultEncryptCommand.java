@@ -11,7 +11,7 @@ public class VaultEncryptCommand implements OsCommand {
     private final String vaultPasswordFilePath;
     private final String plainTextFilePath;
 
-    public static OsCommand from(VaultConfiguration configuration, String plainTextFilePath) {
+    public static VaultEncryptCommand from(VaultConfiguration configuration, String plainTextFilePath) {
         return VaultEncryptCommand.builder()
                 .ansibleVaultPath(configuration.getAnsibleVaultPath())
                 .vaultPasswordFilePath(configuration.getVaultPasswordFilePath())
