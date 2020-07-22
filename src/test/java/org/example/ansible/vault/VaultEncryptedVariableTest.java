@@ -104,8 +104,8 @@ class VaultEncryptedVariableTest {
                 "1.1, db_password",
                 "1.2, some_password"
         })
-        void shouldParseVariableName(String format, String expectedVariableName) {
-            var encryptString = fixtureWithFormat(format);
+        void shouldParseVariableName(String formatVersion, String expectedVariableName) {
+            var encryptString = fixtureWithFormatVersion(formatVersion);
             var vaultEncryptedVariable = new VaultEncryptedVariable(encryptString);
 
             assertThat(vaultEncryptedVariable.getVariableName()).isEqualTo(expectedVariableName);
@@ -113,11 +113,11 @@ class VaultEncryptedVariableTest {
 
         @ParameterizedTest
         @ValueSource(strings = {"1.1", "1.2"})
-        void shouldParseFormat(String format) {
-            var encryptString = fixtureWithFormat(format);
+        void shouldParseFormatVersion(String formatVersion) {
+            var encryptString = fixtureWithFormatVersion(formatVersion);
             var vaultEncryptedVariable = new VaultEncryptedVariable(encryptString);
 
-            assertThat(vaultEncryptedVariable.getFormat()).isEqualTo(format);
+            assertThat(vaultEncryptedVariable.getFormatVersion()).isEqualTo(formatVersion);
         }
 
         @ParameterizedTest
@@ -125,8 +125,8 @@ class VaultEncryptedVariableTest {
                 "1.1, AES256",
                 "1.2, AES256"
         })
-        void shouldParseCipher(String format, String expectedCipher) {
-            var encryptString = fixtureWithFormat(format);
+        void shouldParseCipher(String formatVersion, String expectedCipher) {
+            var encryptString = fixtureWithFormatVersion(formatVersion);
             var vaultEncryptedVariable = new VaultEncryptedVariable(encryptString);
 
             assertThat(vaultEncryptedVariable.getCipher()).isEqualTo(expectedCipher);
@@ -136,16 +136,16 @@ class VaultEncryptedVariableTest {
         class ShouldParseVaultIdLabel {
 
             @Test
-            void asEmpty_WhenFormat_1_1() {
-                var encryptString = fixtureWithFormat("1.1");
+            void asEmpty_WhenFormatVersion_1_1() {
+                var encryptString = fixtureWithFormatVersion("1.1");
                 var vaultEncryptedVariable = new VaultEncryptedVariable(encryptString);
 
                 assertThat(vaultEncryptedVariable.getVaultIdLabel()).isEmpty();
             }
 
             @Test
-            void whenFormat_1_2() {
-                var encryptString = fixtureWithFormat("1.2");
+            void whenFormatVersion_1_2() {
+                var encryptString = fixtureWithFormatVersion("1.2");
                 var vaultEncryptedVariable = new VaultEncryptedVariable(encryptString);
 
                 assertThat(vaultEncryptedVariable.getVaultIdLabel()).hasValue("dev");
@@ -154,19 +154,19 @@ class VaultEncryptedVariableTest {
 
         @ParameterizedTest
         @ValueSource(strings = {"1.1", "1.2"})
-        void shouldParseEncryptedContent(String format) {
-            var encryptString = fixtureWithFormat(format);
+        void shouldParseEncryptedContent(String formatVersion) {
+            var encryptString = fixtureWithFormatVersion(formatVersion);
             var vaultEncryptedVariable = new VaultEncryptedVariable(encryptString);
 
-            var encryptedContent = Fixtures.fixture("ansible-vault/encrypt_string_" + format + "_encrypted_content_only.txt")
+            var encryptedContent = Fixtures.fixture("ansible-vault/encrypt_string_" + formatVersion + "_encrypted_content_only.txt")
                     .lines()
                     .collect(toUnmodifiableList());
             assertThat(vaultEncryptedVariable.getEncryptedContentLines()).isEqualTo(encryptedContent);
         }
     }
 
-    private static String fixtureWithFormat(String format) {
-        return Fixtures.fixture("ansible-vault/encrypt_string_" + format + ".txt");
+    private static String fixtureWithFormatVersion(String version) {
+        return Fixtures.fixture("ansible-vault/encrypt_string_" + version + ".txt");
     }
 
     @Nested

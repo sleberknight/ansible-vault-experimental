@@ -37,7 +37,7 @@ class VaultEncryptedVariable {
     private static final String LINE_SEPARATOR = System.lineSeparator();
 
     private String variableName;
-    private String format;
+    private String formatVersion;
     private String cipher;
     @Getter(AccessLevel.NONE) private String vaultIdLabel;
     private List<String> encryptedContentLines;
@@ -67,7 +67,7 @@ class VaultEncryptedVariable {
     }
 
     // line 2 should be:
-    // <10 spaces>$ANSIBLE_VAULT;<format>;<cipher>[;<vault-id-label]
+    // <10 spaces>$ANSIBLE_VAULT;<format-version>;<cipher>[;<vault-id-label]
     private void parseLine2(List<String> lines) {
         var second = KiwiLists.second(lines);
         checkArgument(second.contains(";"), INVALID_ANSIBLE_VAULT_DECLARATION);
@@ -75,8 +75,8 @@ class VaultEncryptedVariable {
         var splat = second.split(";");
         checkArgument(line2HasValidLength(splat) && line2HasValidPrefix(splat[0]), INVALID_ANSIBLE_VAULT_DECLARATION);
 
-        checkArgument(isValidFormat(splat[1]), INVALID_ANSIBLE_VAULT_DECLARATION);
-        this.format = splat[1];
+        checkArgument(isValidFormatVersion(splat[1]), INVALID_ANSIBLE_VAULT_DECLARATION);
+        this.formatVersion = splat[1];
 
         checkArgumentNotBlank(splat[2], INVALID_ANSIBLE_VAULT_DECLARATION);
         this.cipher = splat[2];
@@ -95,7 +95,7 @@ class VaultEncryptedVariable {
         return parts.length == 3 || parts.length == 4;
     }
 
-    private static boolean isValidFormat(String value) {
+    private static boolean isValidFormatVersion(String value) {
         return "1.1".equals(value) || "1.2".equals(value);
     }
 
@@ -117,7 +117,7 @@ class VaultEncryptedVariable {
     }
 
     private String encryptedFileFirstLine() {
-        return "$ANSIBLE_VAULT;" + format + ";" + cipher + vaultIdLabelFragmentOrEmpty();
+        return "$ANSIBLE_VAULT;" + formatVersion + ";" + cipher + vaultIdLabelFragmentOrEmpty();
     }
 
     private String vaultIdLabelFragmentOrEmpty() {
