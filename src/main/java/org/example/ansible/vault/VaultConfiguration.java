@@ -1,6 +1,7 @@
 package org.example.ansible.vault;
 
-import lombok.AllArgsConstructor;
+import static java.util.Objects.isNull;
+
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -8,15 +9,21 @@ import lombok.Setter;
 
 @Getter
 @Setter
-@Builder
 @NoArgsConstructor
-@AllArgsConstructor
 public class VaultConfiguration {
 
     private String ansibleVaultPath;
     private String vaultPasswordFilePath;
-
-    // TODO Should this default to the user's tmp dir?
     private String tempDirectory;
 
+    @Builder
+    public VaultConfiguration(String ansibleVaultPath, String vaultPasswordFilePath, String tempDirectory) {
+        this.ansibleVaultPath = ansibleVaultPath;
+        this.vaultPasswordFilePath = vaultPasswordFilePath;
+        this.tempDirectory = isNull(tempDirectory) ? getJavaTempDir() : tempDirectory;
+    }
+
+    private String getJavaTempDir() {
+        return System.getProperty("java.io.tmpdir");
+    }
 }
