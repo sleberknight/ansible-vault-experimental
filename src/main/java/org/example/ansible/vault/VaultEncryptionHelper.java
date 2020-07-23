@@ -13,7 +13,6 @@ import com.google.common.annotations.VisibleForTesting;
 import lombok.extern.slf4j.Slf4j;
 import org.kiwiproject.base.process.ProcessHelper;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
@@ -75,11 +74,6 @@ public class VaultEncryptionHelper {
         return Path.of(outputFilePath);
     }
 
-    private Path executeVaultCommandWithoutOutput(OsCommand osCommand, String filePath) {
-        executeVaultCommand(osCommand);
-        return new File(filePath).toPath();
-    }
-
     /**
      * Wraps ansible-vault view command. Returns the decrypted contents of the file.
      * The original encrypted file is not modified.
@@ -88,6 +82,26 @@ public class VaultEncryptionHelper {
         validateEncryptionConfiguration(configuration);
         var osCommand = VaultViewCommand.from(configuration, encryptedFilePath);
         return executeVaultCommandReturningStdout(osCommand);
+    }
+
+
+    /**
+     * Wraps ansible-vault rekey command. Returns the path of the rekeyed file.
+     */
+    public Path rekeyFile(String encryptedFilePath,
+                          String newVaultPasswordFilePath,
+                          VaultConfiguration configuration) {
+        checkArgument(!newVaultPasswordFilePath.equalsIgnoreCase(configuration.getVaultPasswordFilePath()),
+                "newVaultPasswordFilePath file must be different than configuration.vaultPasswordFilePath (case-insensitive)");
+
+        validateEncryptionConfiguration(configuration);
+        var osCommand = VaultRekeyCommand.from(configuration, encryptedFilePath, newVaultPasswordFilePath);
+        return executeVaultCommandWithoutOutput(osCommand, encryptedFilePath);
+    }
+
+    private Path executeVaultCommandWithoutOutput(OsCommand osCommand, String filePath) {
+        executeVaultCommand(osCommand);
+        return Path.of(filePath);
     }
 
     /**
