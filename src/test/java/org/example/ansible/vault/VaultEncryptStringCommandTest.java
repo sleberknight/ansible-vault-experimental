@@ -35,4 +35,22 @@ class VaultEncryptStringCommandTest {
                 plainText
         );
     }
+
+    @Test
+    void shouldBuildCommand_WithVaultId() {
+        var vaultIdLabel = "test";
+        var plainText = "the plain text";
+        var variableName = "MySecret";
+        var command = VaultEncryptStringCommand.from(configuration, vaultIdLabel, plainText, variableName);
+
+        assertThat(command.getCommandParts()).containsExactly(
+                configuration.getAnsibleVaultPath(),
+                "encrypt_string",
+                "--vault-id",
+                vaultIdLabel + "@" + configuration.getVaultPasswordFilePath(),
+                "--name",
+                variableName,
+                plainText
+        );
+    }
 }
