@@ -209,7 +209,7 @@ class VaultEncryptionHelperIntegrationTest {
     }
 
     @Nested
-    class View {
+    class ViewFile {
 
         private Path encryptedFile;
 
@@ -250,6 +250,64 @@ class VaultEncryptionHelperIntegrationTest {
             assertThatThrownBy(() -> helper.viewFile("/does/not/exist.txt", config))
                     .isExactlyInstanceOf(VaultEncryptionException.class)
                     .hasMessageStartingWith("ansible-vault returned non-zero exit code 1. Stderr: ");
+        }
+    }
+
+    @Nested
+    class RekeyFile {
+
+        private Path encryptedFile;
+        private Path newPasswordFile;
+        private VaultConfiguration newConfig;
+
+        @BeforeEach
+        void setUp() throws IOException {
+            var encryptedResourceFile = Fixtures.fixturePath("ansible-vault/secret.txt");
+            encryptedFile = Files.copy(encryptedResourceFile, Path.of(tempDir, "secret.txt"));
+
+            newPasswordFile = Path.of(tempDir, ".new_vault_pass");
+            var newPassword = "you'll-shoot-your-eye-out";
+            Files.writeString(newPasswordFile, newPassword);
+
+            newConfig = VaultConfiguration.builder()
+                    .ansibleVaultPath(ansibleVaultFile)
+                    .vaultPasswordFilePath(newPasswordFile.toString())
+                    .tempDirectory(tempDir)
+                    .build();
+        }
+
+        @Test
+        void shouldRekeyAnEncryptedFile() {
+            var rekeyedFile = helper.rekeyFile(encryptedFile.toString(), newPasswordFile.toString(), config);
+
+            var rekeyedFilePath = rekeyedFile.toString();
+            var fileContent = helper.viewFile(rekeyedFilePath, newConfig);
+            assertThat(fileContent).isEqualToNormalizingWhitespace(THE_SECRET);
+
+            assertThatThrownBy(() -> helper.viewFile(rekeyedFilePath, config))
+                    .describedAs("Should not be able to decrypt using original password file")
+                    .isExactlyInstanceOf(VaultEncryptionException.class)
+                    .hasMessageStartingWith("ansible-vault returned non-zero exit code 1. Stderr: ");
+        }
+
+        @Test
+        void shouldThrowWhenGivenAnUnencryptedFile() throws IOException {
+            var plainTextFile = Files.writeString(Path.of(tempDir, "foo.txt"), "some plain text")
+                    .toString();
+            var newPasswordFilePath = newPasswordFile.toString();
+
+            assertThatThrownBy(() -> helper.rekeyFile(plainTextFile, newPasswordFilePath, config))
+                    .isExactlyInstanceOf(VaultEncryptionException.class)
+                    .hasMessageStartingWith("ansible-vault returned non-zero exit code 1. Stderr: ");
+        }
+
+        @Test
+        void shouldThrowWhenGivenFileThatDoesNotExist() {
+            var newPasswordFilePath = newPasswordFile.toString();
+
+            assertThatThrownBy(() -> helper.rekeyFile("/does/not/exist.txt", newPasswordFilePath, config))
+                    .isExactlyInstanceOf(VaultEncryptionException.class)
+                    .hasMessageStartingWith("ansible-vault returned non-zero exit code");
         }
     }
 

@@ -12,6 +12,7 @@ import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import org.example.ansible.vault.testing.Fixtures;
@@ -173,6 +174,8 @@ class VaultEncryptionHelperTest {
                 assertThatIllegalArgumentException()
                         .isThrownBy(() -> helper.decryptFile(encryptedFile, outputFile, configuration))
                         .withMessage("outputFilePath must be different than encryptedFilePath (case-insensitive)");
+
+                verifyNoInteractions(processHelper);
             }
 
             @Test
@@ -223,6 +226,54 @@ class VaultEncryptionHelperTest {
             verify(processHelper).launch(command.getCommandParts());
         }
     }
+
+    @Nested
+    class RekeyFile {
+
+        @Test
+        void shouldRekeyAndReturnPathOfRekeyedFile() {
+            mockOsProcess(processHelper, process, 0, null, "Rekey successful");
+
+            var encryptedFile = "/data/etc/secrets.yml";
+            var newVaultPasswordFilePath = "~/.new_vault_pass.txt";
+
+            var rekeyedFile = helper.rekeyFile(encryptedFile, newVaultPasswordFilePath, configuration);
+
+            assertThat(rekeyedFile).isEqualTo(Path.of(encryptedFile));
+
+            var command = VaultRekeyCommand.from(configuration, encryptedFile, newVaultPasswordFilePath);
+            verify(processHelper).launch(command.getCommandParts());
+        }
+
+        @Test
+        void shouldEnsureNewPasswordFileIsDifferentThanOriginalPasswordFile() {
+            var encryptedFile = "/data/etc/secrets.yml";
+            var newVaultPasswordFilePath = configuration.getVaultPasswordFilePath();
+
+            assertThatIllegalArgumentException()
+                    .isThrownBy(() -> helper.rekeyFile(encryptedFile, newVaultPasswordFilePath, configuration))
+                    .withMessage("newVaultPasswordFilePath file must be different than configuration.vaultPasswordFilePath (case-insensitive)");
+
+            verifyNoInteractions(processHelper);
+        }
+
+        @Test
+        void shouldThrowException_WhenExitCodeIsNonZero() {
+            var errorOutput = "ERROR! input is not vault encrypted data/etc/secrets.yml is not a vault encrypted file for /etc/secrets.yml";
+            mockOsProcess(processHelper, process, 1, null, errorOutput);
+
+            var encryptedFilePath = "/etc/secrets.yml";
+            var newVaultPasswordFilePath = "~/.new_vault_pass.txt";
+
+            assertThatThrownBy(() -> helper.rekeyFile(encryptedFilePath, newVaultPasswordFilePath, configuration))
+                    .isExactlyInstanceOf(VaultEncryptionException.class)
+                    .hasMessage("ansible-vault returned non-zero exit code 1. Stderr: %s", errorOutput);
+
+            var command = VaultRekeyCommand.from(configuration, encryptedFilePath, newVaultPasswordFilePath);
+            verify(processHelper).launch(command.getCommandParts());
+        }
+    }
+
 
     @Nested
     class EncryptString {
