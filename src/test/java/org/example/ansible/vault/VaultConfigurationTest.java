@@ -3,29 +3,50 @@ package org.example.ansible.vault;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 @DisplayName("VaultConfiguration")
 class VaultConfigurationTest {
 
-    @Test
-    void shouldUseTempDirectoryIfSupplied() {
-        var config = VaultConfiguration.builder()
-                .ansibleVaultPath("/usr/bin/ansible-vault")
-                .vaultPasswordFilePath("/data/vault/.vault_pass")
-                .tempDirectory("/data/vault/tmp")
-                .build();
+    @Nested
+    class Builder {
 
-        assertThat(config.getTempDirectory()).isEqualTo("/data/vault/tmp");
+        @Test
+        void shouldUseTempDirectoryIfSupplied() {
+            var config = VaultConfiguration.builder()
+                    .ansibleVaultPath("/usr/bin/ansible-vault")
+                    .vaultPasswordFilePath("/data/vault/.vault_pass")
+                    .tempDirectory("/data/vault/tmp")
+                    .build();
+
+            assertThat(config.getTempDirectory()).isEqualTo("/data/vault/tmp");
+        }
+
+        @Test
+        void shouldAssignTempDirectoryIfNotSupplied() {
+            var config = VaultConfiguration.builder()
+                    .ansibleVaultPath("/usr/bin/ansible-vault")
+                    .vaultPasswordFilePath("/data/vault/.vault_pass")
+                    .build();
+
+            assertTempDirectoryIsJavaTempDir(config);
+        }
     }
 
-    @Test
-    void shouldAssignTempDirectoryIfNotSupplied() {
-        var config = VaultConfiguration.builder()
-                .ansibleVaultPath("/usr/bin/ansible-vault")
-                .vaultPasswordFilePath("/data/vault/.vault_pass")
-                .build();
+    @Nested
+    class NoArgsConstructor {
 
+        @Test
+        void shouldAssignTempDirectory() {
+            var config = new VaultConfiguration();
+
+            assertTempDirectoryIsJavaTempDir(config);
+        }
+
+    }
+
+    private void assertTempDirectoryIsJavaTempDir(VaultConfiguration config) {
         assertThat(config.getTempDirectory()).isEqualTo(System.getProperty("java.io.tmpdir"));
     }
 }
