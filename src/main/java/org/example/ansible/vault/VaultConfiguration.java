@@ -4,17 +4,19 @@ import static java.util.Objects.isNull;
 
 import lombok.Builder;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Getter
 @Setter
-@NoArgsConstructor
 public class VaultConfiguration {
 
     private String ansibleVaultPath;
     private String vaultPasswordFilePath;
     private String tempDirectory;
+
+    public VaultConfiguration() {
+        this.tempDirectory = getJavaTempDir();
+    }
 
     @Builder
     public VaultConfiguration(String ansibleVaultPath, String vaultPasswordFilePath, String tempDirectory) {
