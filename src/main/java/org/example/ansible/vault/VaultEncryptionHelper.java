@@ -49,6 +49,15 @@ public class VaultEncryptionHelper {
     }
 
     /**
+     * Wraps the ansible-vault encrypt command using a vault ID label. Encrypts file in place.
+     */
+    public Path encryptFile(String plainTextFilePath, String vaultIdLabel, VaultConfiguration configuration) {
+        validateEncryptionConfiguration(configuration);
+        var osCommand = VaultEncryptCommand.from(configuration, vaultIdLabel, plainTextFilePath);
+        return executeVaultCommandWithoutOutput(osCommand, plainTextFilePath);
+    }
+
+    /**
      * Wraps ansible-vault decrypt command. Decrypts file in place.
      */
     public Path decryptFile(String encryptedFilePath, VaultConfiguration configuration) {
@@ -110,6 +119,18 @@ public class VaultEncryptionHelper {
     public String encryptString(String plainText, String variableName, VaultConfiguration configuration) {
         validateEncryptionConfiguration(configuration);
         var osCommand = VaultEncryptStringCommand.from(configuration, plainText, variableName);
+        return executeVaultCommandReturningStdout(osCommand);
+    }
+
+    /**
+     * Wraps the ansible-vault encrypt_string command  using a vault ID label.
+     */
+    public String encryptString(String vaultIdLabel,
+                                String plainText,
+                                String variableName,
+                                VaultConfiguration configuration) {
+        validateEncryptionConfiguration(configuration);
+        var osCommand = VaultEncryptStringCommand.from(configuration, vaultIdLabel, plainText, variableName);
         return executeVaultCommandReturningStdout(osCommand);
     }
 

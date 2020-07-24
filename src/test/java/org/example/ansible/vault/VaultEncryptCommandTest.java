@@ -33,4 +33,20 @@ class VaultEncryptCommandTest {
                 plainTextFileName
         );
     }
+
+    @Test
+    void shouldBuildCommand_WithVaultId() {
+        var vaultIdLabel = "test";
+        var plainTextFileName = "/data/etc/secrets/passwords.txt";
+
+        var command = VaultEncryptCommand.from(configuration, vaultIdLabel, plainTextFileName);
+
+        assertThat(command.getCommandParts()).containsExactly(
+                configuration.getAnsibleVaultPath(),
+                "encrypt",
+                "--vault-id",
+                vaultIdLabel + "@" + configuration.getVaultPasswordFilePath(),
+                plainTextFileName
+        );
+    }
 }

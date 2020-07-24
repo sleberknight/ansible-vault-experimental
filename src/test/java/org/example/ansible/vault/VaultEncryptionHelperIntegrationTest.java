@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.junit.jupiter.api.condition.OS.LINUX;
 import static org.junit.jupiter.api.condition.OS.MAC;
+import static org.kiwiproject.collect.KiwiLists.first;
 
 import org.apache.commons.lang3.SystemUtils;
 import org.example.ansible.vault.testing.Fixtures;
@@ -114,6 +115,47 @@ class VaultEncryptionHelperIntegrationTest {
         @Test
         void shouldThrowWhenGivenFileThatDoesNotExist() {
             assertThatThrownBy(() -> helper.encryptFile("/does/not/exist.txt", config))
+                    .isExactlyInstanceOf(VaultEncryptionException.class)
+                    .hasMessageStartingWith("ansible-vault returned non-zero exit code 1. Stderr: ");
+        }
+    }
+
+    @Nested
+    class EncryptFileWithVaultIdLabel {
+
+        private Path plainTextFile;
+        private String vaultIdLabel;
+
+        @BeforeEach
+        void setUp() throws IOException {
+            plainTextFile = Files.writeString(Path.of(tempDir, "foo.txt"), "the plain text");
+            vaultIdLabel = "test";
+        }
+
+        @Test
+        void shouldEncryptPlainTextFile() throws IOException {
+            var encryptedFile = helper.encryptFile(plainTextFile.toString(), vaultIdLabel, config);
+
+            assertThat(encryptedFile)
+                    .describedAs("Encrypted file path should be the same")
+                    .isEqualTo(plainTextFile);
+
+            var firstLine = first(Files.readAllLines(encryptedFile, StandardCharsets.UTF_8));
+            assertThat(firstLine).endsWith(";" + vaultIdLabel);
+        }
+
+        @Test
+        void shouldThrowWhenGivenAlreadyEncryptedFile() {
+            var encryptedFile = helper.encryptFile(plainTextFile.toString(), config).toString();
+
+            assertThatThrownBy(() -> helper.encryptFile(encryptedFile, vaultIdLabel, config))
+                    .isExactlyInstanceOf(VaultEncryptionException.class)
+                    .hasMessageStartingWith("ansible-vault returned non-zero exit code 1. Stderr: ");
+        }
+
+        @Test
+        void shouldThrowWhenGivenFileThatDoesNotExist() {
+            assertThatThrownBy(() -> helper.encryptFile("/does/not/exist.txt", vaultIdLabel, config))
                     .isExactlyInstanceOf(VaultEncryptionException.class)
                     .hasMessageStartingWith("ansible-vault returned non-zero exit code 1. Stderr: ");
         }
@@ -325,6 +367,7 @@ class VaultEncryptionHelperIntegrationTest {
             var variable = new VaultEncryptedVariable(encryptedString);
 
             assertThat(variable.getVariableName()).isEqualTo(variableName);
+            assertThat(variable.getVaultIdLabel()).isEmpty();
         }
 
         @ParameterizedTest
@@ -335,6 +378,49 @@ class VaultEncryptionHelperIntegrationTest {
         })
         void shouldEncryptAndDecryptStrings(String variableName, String plainText) {
             var encryptedString = helper.encryptString(plainText, variableName, config);
+            var decryptedString = helper.decryptString(encryptedString, config);
+
+            assertThat(decryptedString).isEqualTo(plainText);
+        }
+    }
+
+    @Nested
+    class EncryptStringWithVaultIdLabel {
+
+        private String vaultIdLabel;
+
+        @BeforeEach
+        void setUp() {
+            vaultIdLabel = "dev";
+        }
+
+        @ParameterizedTest
+        @CsvSource({
+                "my_password,password,1-2-3-4-5",
+                "the_answer,42",
+                "some_variable,67890-12345"
+        })
+        void shouldEncryptStringInValidFormat(String variableName, String plainText) {
+            var encryptedString = helper.encryptString(vaultIdLabel, plainText, variableName, config);
+            var variable = new VaultEncryptedVariable(encryptedString);
+
+            assertThat(variable.getVariableName()).isEqualTo(variableName);
+            assertThat(variable.getVaultIdLabel()).hasValue(vaultIdLabel);
+        }
+
+        @ParameterizedTest
+        @CsvSource({
+                "my_password,this is my password",
+                "secret_variable,42",
+                "another_variable,12345"
+        })
+        void shouldEncryptAndDecryptStrings(String variableName, String plainText) {
+            var encryptedString = helper.encryptString(vaultIdLabel, plainText, variableName, config);
+            var variable = new VaultEncryptedVariable(encryptedString);
+
+            assertThat(variable.getVariableName()).isEqualTo(variableName);
+            assertThat(variable.getVaultIdLabel()).hasValue(vaultIdLabel);
+
             var decryptedString = helper.decryptString(encryptedString, config);
 
             assertThat(decryptedString).isEqualTo(plainText);

@@ -111,6 +111,41 @@ class VaultEncryptionHelperTest {
     }
 
     @Nested
+    class EncryptFileWithVaultIdLabel {
+
+        @Test
+        void shouldReturnEncryptedPath_WhenSuccessful() {
+            mockOsProcess(processHelper, process, 0, null, "Encryption successful");
+
+            var vaultIdLabel = "prod";
+            var plainTextFile = "/data/etc/prod-secrets.yml";
+
+            var encryptedFile = helper.encryptFile(plainTextFile, vaultIdLabel, configuration);
+
+            assertThat(encryptedFile).isEqualTo(Path.of(plainTextFile));
+
+            var command = VaultEncryptCommand.from(configuration, vaultIdLabel, plainTextFile);
+            verify(processHelper).launch(command.getCommandParts());
+        }
+
+        @Test
+        void shouldThrowException_WhenExitCodeIsNonZero() {
+            var errorOutput = "ERROR! input is already encrypted";
+            mockOsProcess(processHelper, process, 1, null, errorOutput);
+
+            var vaultIdLabel = "staging";
+            var plainTextFile = "/data/etc/staging-secrets.yml";
+
+            assertThatThrownBy(() -> helper.encryptFile(plainTextFile, vaultIdLabel, configuration))
+                    .isExactlyInstanceOf(VaultEncryptionException.class)
+                    .hasMessage("ansible-vault returned non-zero exit code 1. Stderr: %s", errorOutput);
+
+            var command = VaultEncryptCommand.from(configuration, vaultIdLabel, plainTextFile);
+            verify(processHelper).launch(command.getCommandParts());
+        }
+    }
+
+    @Nested
     class DecryptFile {
 
         @Nested
@@ -189,6 +224,9 @@ class VaultEncryptionHelperTest {
                 assertThatThrownBy(() -> helper.decryptFile(encryptedFile, outputFile, configuration))
                         .isExactlyInstanceOf(VaultEncryptionException.class)
                         .hasMessage("ansible-vault returned non-zero exit code 1. Stderr: %s", errorOutput);
+
+                var command = VaultDecryptCommand.from(configuration, encryptedFile, outputFile);
+                verify(processHelper).launch(command.getCommandParts());
             }
         }
     }
@@ -274,7 +312,6 @@ class VaultEncryptionHelperTest {
         }
     }
 
-
     @Nested
     class EncryptString {
 
@@ -307,6 +344,44 @@ class VaultEncryptionHelperTest {
                     .hasMessage("ansible-vault returned non-zero exit code 1. Stderr: %s", errorOutput);
 
             var command = VaultEncryptStringCommand.from(configuration, plainText, variableName);
+            verify(processHelper).launch(command.getCommandParts());
+        }
+    }
+
+    @Nested
+    class EncryptStringWithVaultIdLabel {
+
+        @Test
+        void shouldReturnEncryptedString_WhenSuccessful() {
+            var encryptedContent = Fixtures.fixture(ENCRYPT_STRING_1_1_FORMAT);
+
+            mockOsProcess(processHelper, process, 0, encryptedContent, "Encryption successful");
+
+            var vaultIdLabel = "dev";
+            var plainText = "this is the plain text";
+            var variableName = "some_variable";
+            var result = helper.encryptString(vaultIdLabel, plainText, variableName, configuration);
+
+            assertThat(result).isEqualTo(encryptedContent);
+
+            var command = VaultEncryptStringCommand.from(configuration, vaultIdLabel, plainText, variableName);
+            verify(processHelper).launch(command.getCommandParts());
+        }
+
+        @Test
+        void shouldThrowException_WhenExitCodeIsNonZero() {
+            var errorOutput = "ERROR! input is already encrypted";
+            mockOsProcess(processHelper, process, 1, null, errorOutput);
+
+            var vaultIdLabel = "staging";
+            var plainText = "my-password";
+            var variableName = "db_password";
+            assertThatThrownBy(() ->
+                    helper.encryptString(vaultIdLabel, plainText, variableName, configuration))
+                    .isExactlyInstanceOf(VaultEncryptionException.class)
+                    .hasMessage("ansible-vault returned non-zero exit code 1. Stderr: %s", errorOutput);
+
+            var command = VaultEncryptStringCommand.from(configuration, vaultIdLabel, plainText, variableName);
             verify(processHelper).launch(command.getCommandParts());
         }
     }
@@ -368,6 +443,9 @@ class VaultEncryptionHelperTest {
             assertThatThrownBy(() -> helper.decryptString(encryptedString, configuration))
                     .isExactlyInstanceOf(VaultEncryptionException.class)
                     .hasMessage("ansible-vault returned non-zero exit code 1. Stderr: %s", errorOutput);
+
+            // Sanity check...
+            verify(processHelper).launch(anyList());
         }
     }
 
