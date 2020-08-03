@@ -5,6 +5,7 @@ import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.example.ansible.vault.Utils.readProcessErrorOutput;
 import static org.example.ansible.vault.Utils.readProcessOutput;
 import static org.kiwiproject.base.KiwiPreconditions.checkArgumentNotBlank;
+import static org.kiwiproject.base.KiwiPreconditions.checkArgumentNotNull;
 import static org.kiwiproject.base.KiwiStrings.f;
 import static org.kiwiproject.base.KiwiStrings.format;
 import static org.kiwiproject.logging.LazyLogParameterSupplier.lazy;
@@ -36,8 +37,22 @@ public class VaultEncryptionHelper {
 
     @VisibleForTesting
     VaultEncryptionHelper(VaultConfiguration configuration, ProcessHelper processHelper) {
-        this.configuration = configuration;
+        checkArgumentNotNull(configuration, "configuration is required");
+        checkArgumentNotNull(processHelper, "processHelper is required");
+
+        this.configuration = validateEncryptionConfiguration(configuration);
         this.processHelper = processHelper;
+    }
+
+    private static VaultConfiguration validateEncryptionConfiguration(VaultConfiguration configuration) {
+        checkArgumentNotBlank(configuration.getVaultPasswordFilePath(), "vaultPasswordFilePath is required");
+        checkArgument(isExistingPath(configuration.getVaultPasswordFilePath()),
+                "vault password file does not exist: {}", configuration.getVaultPasswordFilePath());
+        checkArgumentNotBlank(configuration.getAnsibleVaultPath(), "ansibleVaultPath is required");
+        checkArgument(isExistingPath(configuration.getAnsibleVaultPath()),
+                "ansible-vault executable does not exist: {}", configuration.getAnsibleVaultPath());
+
+        return configuration;
     }
 
     /**
@@ -157,13 +172,6 @@ public class VaultEncryptionHelper {
         } finally {
             deleteFileQuietly(tempFilePath);
         }
-    }
-
-    private static void validateEncryptionConfiguration(VaultConfiguration configuration) {
-        checkArgument(isExistingPath(configuration.getVaultPasswordFilePath()),
-                "vault password file does not exist: {}", configuration.getVaultPasswordFilePath());
-        checkArgument(isExistingPath(configuration.getAnsibleVaultPath()),
-                "ansible-vault executable does not exist: {}", configuration.getAnsibleVaultPath());
     }
 
     private static boolean isExistingPath(String filePath) {

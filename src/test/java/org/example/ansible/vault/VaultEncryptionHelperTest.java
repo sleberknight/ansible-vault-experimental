@@ -78,6 +78,24 @@ class VaultEncryptionHelperTest {
     }
 
     @Nested
+    class Constructor {
+
+        @Test
+        void shouldNotAllowNullConfig() {
+            assertThatIllegalArgumentException()
+                    .isThrownBy(() -> new VaultEncryptionHelper(null));
+        }
+
+        @Test
+        void shouldValidateVaultConfiguration() {
+            var emptyConfig = new VaultConfiguration();
+
+            assertThatIllegalArgumentException()
+                    .isThrownBy(() -> new VaultEncryptionHelper(emptyConfig));
+        }
+    }
+
+    @Nested
     class EncryptFile {
 
         @Test
