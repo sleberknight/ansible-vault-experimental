@@ -12,9 +12,9 @@ import java.util.List;
 @UtilityClass
 class Utils {
 
-    // Consider:
-    // - moving subList methods into KiwiLists
-    // - moving readProcessXxx methods into KiwiIO
+    // TODO Consider:
+    //  - moving subList methods into KiwiLists
+    //  - moving readProcessXxx methods into KiwiIO
 
     static List<String> subListExcludingLast(List<String> input) {
         return input.subList(0, input.size() - 1);
