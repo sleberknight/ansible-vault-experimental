@@ -40,14 +40,14 @@ public class VaultEncryptionHelper {
         checkArgumentNotNull(configuration, "configuration is required");
         checkArgumentNotNull(processHelper, "processHelper is required");
 
-        this.configuration = validateAndCopyEncryptionConfiguration(configuration);
+        this.configuration = validateAndCopyVaultConfiguration(configuration);
         this.processHelper = processHelper;
     }
 
     /**
      * Validates and returns (assuming validation passed) a defensive copy of the given configuration.
      */
-    private static VaultConfiguration validateAndCopyEncryptionConfiguration(VaultConfiguration configuration) {
+    private static VaultConfiguration validateAndCopyVaultConfiguration(VaultConfiguration configuration) {
         checkArgumentNotBlank(configuration.getVaultPasswordFilePath(), "vaultPasswordFilePath is required");
         checkArgument(isExistingPath(configuration.getVaultPasswordFilePath()),
                 "vault password file does not exist: {}", configuration.getVaultPasswordFilePath());
