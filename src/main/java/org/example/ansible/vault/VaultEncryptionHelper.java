@@ -20,7 +20,6 @@ import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
-@SuppressWarnings({"java:S125"})
 public class VaultEncryptionHelper {
 
     private static final String LINE_SEPARATOR = System.lineSeparator();
@@ -29,13 +28,15 @@ public class VaultEncryptionHelper {
     private static final TimeUnit DEFAULT_TIMEOUT_UNIT = TimeUnit.SECONDS;
 
     private final ProcessHelper processHelper;
+    private final VaultConfiguration configuration;
 
-    public VaultEncryptionHelper() {
-        this(new ProcessHelper());
+    public VaultEncryptionHelper(VaultConfiguration configuration) {
+        this(configuration, new ProcessHelper());
     }
 
     @VisibleForTesting
-    VaultEncryptionHelper(ProcessHelper processHelper) {
+    VaultEncryptionHelper(VaultConfiguration configuration, ProcessHelper processHelper) {
+        this.configuration = configuration;
         this.processHelper = processHelper;
     }
 

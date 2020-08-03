@@ -31,12 +31,12 @@ public class MainEncryptFile {
         var filePath = Path.of(tmpDir.toString(), "tmp" + System.nanoTime() + ".txt");
         var textFile = Files.writeString(filePath, "some plain text" + System.lineSeparator());
 
-        var helper = new VaultEncryptionHelper();
-
         var config = VaultConfiguration.builder()
                 .ansibleVaultPath(ansibleVaultExecPath.toString())
                 .vaultPasswordFilePath(vaultPasswordPath.toString())
                 .build();
+
+        var helper = new VaultEncryptionHelper(config);
 
         var encryptedFile = helper.encryptFile(textFile.toString(), config);
 

@@ -47,7 +47,7 @@ public class Main {
                 .tempDirectory(tempPath.toString())
                 .build();
 
-        var helper = new VaultEncryptionHelper();
+        var helper = new VaultEncryptionHelper(config);
 
         var decryptedValue = helper.decryptString(encryptedString, config);
         printDecryptedValue(decryptedValue);

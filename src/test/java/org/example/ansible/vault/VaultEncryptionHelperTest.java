@@ -74,7 +74,7 @@ class VaultEncryptionHelperTest {
 
         processHelper = mock(ProcessHelper.class);
         process = mock(Process.class);
-        helper = new VaultEncryptionHelper(processHelper);
+        helper = new VaultEncryptionHelper(configuration, processHelper);
     }
 
     @Nested
