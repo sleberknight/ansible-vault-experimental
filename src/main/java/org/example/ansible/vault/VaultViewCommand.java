@@ -1,5 +1,8 @@
 package org.example.ansible.vault;
 
+import static org.kiwiproject.base.KiwiPreconditions.checkArgumentNotBlank;
+import static org.kiwiproject.base.KiwiPreconditions.checkArgumentNotNull;
+
 import lombok.Builder;
 
 import java.nio.file.Paths;
@@ -13,6 +16,9 @@ public class VaultViewCommand implements OsCommand {
     private final String encryptedFilePath;
 
     public static VaultViewCommand from(VaultConfiguration configuration, String encryptedFilePath) {
+        checkArgumentNotNull(configuration, "configuration cannot be null");
+        checkArgumentNotBlank(encryptedFilePath, "encryptedFilePath cannot be blank");
+
         return VaultViewCommand.builder()
                 .ansibleVaultPath(configuration.getAnsibleVaultPath())
                 .vaultPasswordFilePath(configuration.getVaultPasswordFilePath())

@@ -44,6 +44,7 @@ class VaultEncryptedVariable {
     private final String encryptedFileContent;
 
     VaultEncryptedVariable(String encryptedString) {
+        checkArgumentNotBlank(encryptedString, "encryptedString cannot be blank");
         parse(encryptedString);
         this.encryptedFileContent = buildEncryptedFileContent();
     }

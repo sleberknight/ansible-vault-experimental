@@ -62,6 +62,7 @@ public class VaultEncryptionHelper {
      * Wraps the ansible-vault encrypt command. Encrypts file in place.
      */
     public Path encryptFile(Path plainTextFilePath) {
+        checkArgumentNotNull(plainTextFilePath, "plainTextFilePath cannot be null");
         return encryptFile(plainTextFilePath.toString());
     }
 
@@ -77,6 +78,7 @@ public class VaultEncryptionHelper {
      * Wraps the ansible-vault encrypt command using a vault ID label. Encrypts file in place.
      */
     public Path encryptFile(Path plainTextFilePath, String vaultIdLabel) {
+        checkArgumentNotNull(plainTextFilePath, "plainTextFilePath cannot be null");
         return encryptFile(plainTextFilePath.toString(), vaultIdLabel);
     }
 
@@ -92,6 +94,7 @@ public class VaultEncryptionHelper {
      * Wraps ansible-vault decrypt command. Decrypts file in place.
      */
     public Path decryptFile(Path encryptedFilePath) {
+        checkArgumentNotNull(encryptedFilePath, "encryptedFilePath cannot be null");
         return decryptFile(encryptedFilePath.toString());
     }
 
@@ -108,6 +111,8 @@ public class VaultEncryptionHelper {
      * The original encrypted file is not modified.
      */
     public Path decryptFile(Path encryptedFilePath, Path outputFilePath) {
+        checkArgumentNotNull(encryptedFilePath, "encryptedFilePath cannot be null");
+        checkArgumentNotNull(outputFilePath, "outputFilePath cannot be null");
         return decryptFile(encryptedFilePath.toString(), outputFilePath.toString());
     }
 
@@ -116,6 +121,8 @@ public class VaultEncryptionHelper {
      * The original encrypted file is not modified.
      */
     public Path decryptFile(String encryptedFilePath, String outputFilePath) {
+        checkArgumentNotBlank(encryptedFilePath, "encryptedFilePath cannot be blank");
+        checkArgumentNotBlank(outputFilePath, "outputFilePath cannot be blank");
         checkArgument(!outputFilePath.equalsIgnoreCase(encryptedFilePath),
                 "outputFilePath must be different than encryptedFilePath (case-insensitive)");
 
@@ -130,6 +137,7 @@ public class VaultEncryptionHelper {
      * The original encrypted file is not modified.
      */
     public String viewFile(Path encryptedFilePath) {
+        checkArgumentNotNull(encryptedFilePath, "encryptedFilePath cannot be null");
         return viewFile(encryptedFilePath.toString());
     }
 
@@ -146,6 +154,8 @@ public class VaultEncryptionHelper {
      * Wraps ansible-vault rekey command. Returns the path of the rekeyed file.
      */
     public Path rekeyFile(Path encryptedFilePath, Path newVaultPasswordFilePath) {
+        checkArgumentNotNull(encryptedFilePath, "encryptedFilePath cannot be null");
+        checkArgumentNotNull(newVaultPasswordFilePath, "newVaultPasswordFilePath cannot be null");
         return rekeyFile(encryptedFilePath.toString(), newVaultPasswordFilePath.toString());
     }
 
@@ -153,6 +163,8 @@ public class VaultEncryptionHelper {
      * Wraps ansible-vault rekey command. Returns the path of the rekeyed file.
      */
     public Path rekeyFile(String encryptedFilePath, String newVaultPasswordFilePath) {
+        checkArgumentNotBlank(encryptedFilePath, "encryptedFilePath cannot be blank");
+        checkArgumentNotBlank(newVaultPasswordFilePath, "newVaultPasswordFilePath cannot be blank");
         checkArgument(!newVaultPasswordFilePath.equalsIgnoreCase(configuration.getVaultPasswordFilePath()),
                 "newVaultPasswordFilePath file must be different than configuration.vaultPasswordFilePath (case-insensitive)");
 
@@ -174,7 +186,7 @@ public class VaultEncryptionHelper {
     }
 
     /**
-     * Wraps the ansible-vault encrypt_string command  using a vault ID label.
+     * Wraps the ansible-vault encrypt_string command  using an optional vault ID label.
      */
     public String encryptString(String vaultIdLabel, String plainText, String variableName) {
         var osCommand = VaultEncryptStringCommand.from(configuration, vaultIdLabel, plainText, variableName);
