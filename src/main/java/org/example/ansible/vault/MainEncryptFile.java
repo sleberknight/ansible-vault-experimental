@@ -38,7 +38,7 @@ public class MainEncryptFile {
 
         var helper = new VaultEncryptionHelper(config);
 
-        var encryptedFile = helper.encryptFile(textFile.toString());
+        var encryptedFile = helper.encryptFile(textFile);
 
         verify(encryptedFile.equals(textFile), "encryptedFile (%s) != textFile (%s)",
                 encryptedFile, textFile);
@@ -54,7 +54,7 @@ public class MainEncryptFile {
         System.out.println("Now cause failure by trying to encrypt the already-encrypted file...");
 
         try {
-            helper.encryptFile(encryptedFile.toString());
+            helper.encryptFile(encryptedFile);
         } catch (Exception e) {
             System.err.println("Error encrypting " + textFile);
             System.err.println(e.getClass());
