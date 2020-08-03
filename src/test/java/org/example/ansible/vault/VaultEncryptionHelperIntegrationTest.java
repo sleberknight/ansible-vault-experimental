@@ -71,7 +71,6 @@ class VaultEncryptionHelperIntegrationTest {
 
     @BeforeEach
     void setUp() throws IOException {
-        helper = new VaultEncryptionHelper();
         tempDir = tempDirPath.toString();
 
         var passwordFilePath = Path.of(tempDir, ".vault_pass");
@@ -82,6 +81,8 @@ class VaultEncryptionHelperIntegrationTest {
                 .vaultPasswordFilePath(passwordFilePath.toString())
                 .tempDirectory(tempDir)
                 .build();
+
+        helper = new VaultEncryptionHelper(config);
     }
 
     @Nested
