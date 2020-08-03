@@ -104,7 +104,7 @@ class VaultEncryptionHelperTest {
 
             var plainTextFile = "/data/etc/secrets.yml";
 
-            var encryptedFile = helper.encryptFile(plainTextFile, configuration);
+            var encryptedFile = helper.encryptFile(plainTextFile);
 
             assertThat(encryptedFile).isEqualTo(Path.of(plainTextFile));
 
@@ -119,7 +119,7 @@ class VaultEncryptionHelperTest {
 
             var plainTextFile = "/data/etc/secrets.yml";
 
-            assertThatThrownBy(() -> helper.encryptFile(plainTextFile, configuration))
+            assertThatThrownBy(() -> helper.encryptFile(plainTextFile))
                     .isExactlyInstanceOf(VaultEncryptionException.class)
                     .hasMessage("ansible-vault returned non-zero exit code 1. Stderr: %s", errorOutput);
 
@@ -138,7 +138,7 @@ class VaultEncryptionHelperTest {
             var vaultIdLabel = "prod";
             var plainTextFile = "/data/etc/prod-secrets.yml";
 
-            var encryptedFile = helper.encryptFile(plainTextFile, vaultIdLabel, configuration);
+            var encryptedFile = helper.encryptFile(plainTextFile, vaultIdLabel);
 
             assertThat(encryptedFile).isEqualTo(Path.of(plainTextFile));
 
@@ -154,7 +154,7 @@ class VaultEncryptionHelperTest {
             var vaultIdLabel = "staging";
             var plainTextFile = "/data/etc/staging-secrets.yml";
 
-            assertThatThrownBy(() -> helper.encryptFile(plainTextFile, vaultIdLabel, configuration))
+            assertThatThrownBy(() -> helper.encryptFile(plainTextFile, vaultIdLabel))
                     .isExactlyInstanceOf(VaultEncryptionException.class)
                     .hasMessage("ansible-vault returned non-zero exit code 1. Stderr: %s", errorOutput);
 
@@ -175,7 +175,7 @@ class VaultEncryptionHelperTest {
 
                 var encryptedFile = "/data/etc/secrets.yml";
 
-                var decryptedFile = helper.decryptFile(encryptedFile, configuration);
+                var decryptedFile = helper.decryptFile(encryptedFile);
 
                 assertThat(decryptedFile).isEqualTo(Path.of(encryptedFile));
 
@@ -190,7 +190,7 @@ class VaultEncryptionHelperTest {
 
                 var encryptedFilePath = "/etc/secrets.yml";
 
-                assertThatThrownBy(() -> helper.decryptFile(encryptedFilePath, configuration))
+                assertThatThrownBy(() -> helper.decryptFile(encryptedFilePath))
                         .isExactlyInstanceOf(VaultEncryptionException.class)
                         .hasMessage("ansible-vault returned non-zero exit code 1. Stderr: %s", errorOutput);
 
@@ -209,7 +209,7 @@ class VaultEncryptionHelperTest {
                 var encryptedFile = "/data/crypt/secrets.yml";
                 var outputFile = "/data/var/secrets.yml";
 
-                var decryptedFile = helper.decryptFile(encryptedFile, outputFile, configuration);
+                var decryptedFile = helper.decryptFile(encryptedFile, outputFile);
 
                 assertThat(decryptedFile).isEqualTo(Path.of(outputFile));
 
@@ -225,7 +225,7 @@ class VaultEncryptionHelperTest {
             })
             void shouldNotPermitNewFileLocationToOverwriteEncryptedFile(String encryptedFile, String outputFile) {
                 assertThatIllegalArgumentException()
-                        .isThrownBy(() -> helper.decryptFile(encryptedFile, outputFile, configuration))
+                        .isThrownBy(() -> helper.decryptFile(encryptedFile, outputFile))
                         .withMessage("outputFilePath must be different than encryptedFilePath (case-insensitive)");
 
                 verifyNoInteractions(processHelper);
@@ -239,7 +239,7 @@ class VaultEncryptionHelperTest {
                 var encryptedFile = "/data/crypt/secrets.yml";
                 var outputFile = "/data/var/secrets.yml";
 
-                assertThatThrownBy(() -> helper.decryptFile(encryptedFile, outputFile, configuration))
+                assertThatThrownBy(() -> helper.decryptFile(encryptedFile, outputFile))
                         .isExactlyInstanceOf(VaultEncryptionException.class)
                         .hasMessage("ansible-vault returned non-zero exit code 1. Stderr: %s", errorOutput);
 
@@ -259,7 +259,7 @@ class VaultEncryptionHelperTest {
 
             var encryptedFile = "/data/etc/secrets.yml";
 
-            var decryptedContents = helper.viewFile(encryptedFile, configuration);
+            var decryptedContents = helper.viewFile(encryptedFile);
 
             assertThat(decryptedContents).isEqualTo(plainText);
 
@@ -274,7 +274,7 @@ class VaultEncryptionHelperTest {
 
             var encryptedFilePath = "/etc/secrets.yml";
 
-            assertThatThrownBy(() -> helper.viewFile(encryptedFilePath, configuration))
+            assertThatThrownBy(() -> helper.viewFile(encryptedFilePath))
                     .isExactlyInstanceOf(VaultEncryptionException.class)
                     .hasMessage("ansible-vault returned non-zero exit code 1. Stderr: %s", errorOutput);
 
@@ -293,7 +293,7 @@ class VaultEncryptionHelperTest {
             var encryptedFile = "/data/etc/secrets.yml";
             var newVaultPasswordFilePath = "~/.new_vault_pass.txt";
 
-            var rekeyedFile = helper.rekeyFile(encryptedFile, newVaultPasswordFilePath, configuration);
+            var rekeyedFile = helper.rekeyFile(encryptedFile, newVaultPasswordFilePath);
 
             assertThat(rekeyedFile).isEqualTo(Path.of(encryptedFile));
 
@@ -307,7 +307,7 @@ class VaultEncryptionHelperTest {
             var newVaultPasswordFilePath = configuration.getVaultPasswordFilePath();
 
             assertThatIllegalArgumentException()
-                    .isThrownBy(() -> helper.rekeyFile(encryptedFile, newVaultPasswordFilePath, configuration))
+                    .isThrownBy(() -> helper.rekeyFile(encryptedFile, newVaultPasswordFilePath))
                     .withMessage("newVaultPasswordFilePath file must be different than configuration.vaultPasswordFilePath (case-insensitive)");
 
             verifyNoInteractions(processHelper);
@@ -321,7 +321,7 @@ class VaultEncryptionHelperTest {
             var encryptedFilePath = "/etc/secrets.yml";
             var newVaultPasswordFilePath = "~/.new_vault_pass.txt";
 
-            assertThatThrownBy(() -> helper.rekeyFile(encryptedFilePath, newVaultPasswordFilePath, configuration))
+            assertThatThrownBy(() -> helper.rekeyFile(encryptedFilePath, newVaultPasswordFilePath))
                     .isExactlyInstanceOf(VaultEncryptionException.class)
                     .hasMessage("ansible-vault returned non-zero exit code 1. Stderr: %s", errorOutput);
 
@@ -341,7 +341,7 @@ class VaultEncryptionHelperTest {
 
             var plainText = "this is the plain text";
             var variableName = "some_variable";
-            var result = helper.encryptString(plainText, variableName, configuration);
+            var result = helper.encryptString(plainText, variableName);
 
             assertThat(result).isEqualTo(encryptedContent);
 
@@ -357,7 +357,7 @@ class VaultEncryptionHelperTest {
             var plainText = "my-password";
             var variableName = "db_password";
             assertThatThrownBy(() ->
-                    helper.encryptString(plainText, variableName, configuration))
+                    helper.encryptString(plainText, variableName))
                     .isExactlyInstanceOf(VaultEncryptionException.class)
                     .hasMessage("ansible-vault returned non-zero exit code 1. Stderr: %s", errorOutput);
 
@@ -378,7 +378,7 @@ class VaultEncryptionHelperTest {
             var vaultIdLabel = "dev";
             var plainText = "this is the plain text";
             var variableName = "some_variable";
-            var result = helper.encryptString(vaultIdLabel, plainText, variableName, configuration);
+            var result = helper.encryptString(vaultIdLabel, plainText, variableName);
 
             assertThat(result).isEqualTo(encryptedContent);
 
@@ -395,7 +395,7 @@ class VaultEncryptionHelperTest {
             var plainText = "my-password";
             var variableName = "db_password";
             assertThatThrownBy(() ->
-                    helper.encryptString(vaultIdLabel, plainText, variableName, configuration))
+                    helper.encryptString(vaultIdLabel, plainText, variableName))
                     .isExactlyInstanceOf(VaultEncryptionException.class)
                     .hasMessage("ansible-vault returned non-zero exit code 1. Stderr: %s", errorOutput);
 
@@ -414,7 +414,7 @@ class VaultEncryptionHelperTest {
 
             var encryptedString = Fixtures.fixture(ENCRYPT_STRING_1_1_FORMAT);
 
-            var result = helper.decryptString(encryptedString, configuration);
+            var result = helper.decryptString(encryptedString);
 
             assertThat(result).isEqualTo(plainText);
 
@@ -458,7 +458,7 @@ class VaultEncryptionHelperTest {
 
             var encryptedString = Fixtures.fixture(ENCRYPT_STRING_1_1_FORMAT);
 
-            assertThatThrownBy(() -> helper.decryptString(encryptedString, configuration))
+            assertThatThrownBy(() -> helper.decryptString(encryptedString))
                     .isExactlyInstanceOf(VaultEncryptionException.class)
                     .hasMessage("ansible-vault returned non-zero exit code 1. Stderr: %s", errorOutput);
 

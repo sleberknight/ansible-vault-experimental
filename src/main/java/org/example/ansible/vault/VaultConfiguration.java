@@ -6,6 +6,9 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 
+/**
+ * This is mutable in case it is used in injected configuration, e.g. in a Dropwizard configuration file.
+ */
 @Getter
 @Setter
 public class VaultConfiguration {
@@ -27,5 +30,13 @@ public class VaultConfiguration {
 
     private String getJavaTempDir() {
         return System.getProperty("java.io.tmpdir");
+    }
+
+    public VaultConfiguration copyOf() {
+        return VaultConfiguration.builder()
+                .ansibleVaultPath(ansibleVaultPath)
+                .vaultPasswordFilePath(vaultPasswordFilePath)
+                .tempDirectory(tempDirectory)
+                .build();
     }
 }
