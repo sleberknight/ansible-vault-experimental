@@ -61,9 +61,23 @@ public class VaultEncryptionHelper {
     /**
      * Wraps the ansible-vault encrypt command. Encrypts file in place.
      */
+    public Path encryptFile(Path plainTextFilePath) {
+        return encryptFile(plainTextFilePath.toString());
+    }
+
+    /**
+     * Wraps the ansible-vault encrypt command. Encrypts file in place.
+     */
     public Path encryptFile(String plainTextFilePath) {
         var osCommand = VaultEncryptCommand.from(configuration, plainTextFilePath);
         return executeVaultCommandWithoutOutput(osCommand, plainTextFilePath);
+    }
+
+    /**
+     * Wraps the ansible-vault encrypt command using a vault ID label. Encrypts file in place.
+     */
+    public Path encryptFile(Path plainTextFilePath, String vaultIdLabel) {
+        return encryptFile(plainTextFilePath.toString(), vaultIdLabel);
     }
 
     /**
@@ -77,9 +91,24 @@ public class VaultEncryptionHelper {
     /**
      * Wraps ansible-vault decrypt command. Decrypts file in place.
      */
+    public Path decryptFile(Path encryptedFilePath) {
+        return decryptFile(encryptedFilePath.toString());
+    }
+
+    /**
+     * Wraps ansible-vault decrypt command. Decrypts file in place.
+     */
     public Path decryptFile(String encryptedFilePath) {
         var osCommand = VaultDecryptCommand.from(configuration, encryptedFilePath);
         return executeVaultCommandWithoutOutput(osCommand, encryptedFilePath);
+    }
+
+    /**
+     * Wraps ansible-vault decrypt command. Decrypts file to a new specified output path.
+     * The original encrypted file is not modified.
+     */
+    public Path decryptFile(Path encryptedFilePath, Path outputFilePath) {
+        return decryptFile(encryptedFilePath.toString(), outputFilePath.toString());
     }
 
     /**
@@ -100,11 +129,25 @@ public class VaultEncryptionHelper {
      * Wraps ansible-vault view command. Returns the decrypted contents of the file.
      * The original encrypted file is not modified.
      */
+    public String viewFile(Path encryptedFilePath) {
+        return viewFile(encryptedFilePath.toString());
+    }
+
+    /**
+     * Wraps ansible-vault view command. Returns the decrypted contents of the file.
+     * The original encrypted file is not modified.
+     */
     public String viewFile(String encryptedFilePath) {
         var osCommand = VaultViewCommand.from(configuration, encryptedFilePath);
         return executeVaultCommandReturningStdout(osCommand);
     }
 
+    /**
+     * Wraps ansible-vault rekey command. Returns the path of the rekeyed file.
+     */
+    public Path rekeyFile(Path encryptedFilePath, Path newVaultPasswordFilePath) {
+        return rekeyFile(encryptedFilePath.toString(), newVaultPasswordFilePath.toString());
+    }
 
     /**
      * Wraps ansible-vault rekey command. Returns the path of the rekeyed file.

@@ -96,7 +96,7 @@ class VaultEncryptionHelperIntegrationTest {
 
         @Test
         void shouldEncryptPlainTextFile() {
-            var encryptedFile = helper.encryptFile(plainTextFile.toString());
+            var encryptedFile = helper.encryptFile(plainTextFile);
 
             assertThat(encryptedFile)
                     .describedAs("Encrypted file path should be the same")
@@ -105,7 +105,7 @@ class VaultEncryptionHelperIntegrationTest {
 
         @Test
         void shouldThrowWhenGivenAlreadyEncryptedFile() {
-            var encryptedFile = helper.encryptFile(plainTextFile.toString()).toString();
+            var encryptedFile = helper.encryptFile(plainTextFile);
 
             assertThatThrownBy(() -> helper.encryptFile(encryptedFile))
                     .isExactlyInstanceOf(VaultEncryptionException.class)
@@ -134,7 +134,7 @@ class VaultEncryptionHelperIntegrationTest {
 
         @Test
         void shouldEncryptPlainTextFile() throws IOException {
-            var encryptedFile = helper.encryptFile(plainTextFile.toString(), vaultIdLabel);
+            var encryptedFile = helper.encryptFile(plainTextFile, vaultIdLabel);
 
             assertThat(encryptedFile)
                     .describedAs("Encrypted file path should be the same")
@@ -146,7 +146,7 @@ class VaultEncryptionHelperIntegrationTest {
 
         @Test
         void shouldThrowWhenGivenAlreadyEncryptedFile() {
-            var encryptedFile = helper.encryptFile(plainTextFile.toString()).toString();
+            var encryptedFile = helper.encryptFile(plainTextFile);
 
             assertThatThrownBy(() -> helper.encryptFile(encryptedFile, vaultIdLabel))
                     .isExactlyInstanceOf(VaultEncryptionException.class)
@@ -177,7 +177,7 @@ class VaultEncryptionHelperIntegrationTest {
 
             @Test
             void shouldDecryptAnEncryptedFileInPlace() throws IOException {
-                var decryptedFile = helper.decryptFile(encryptedFile.toString());
+                var decryptedFile = helper.decryptFile(encryptedFile);
 
                 assertThat(decryptedFile)
                         .describedAs("Decrypted file path should be the same")
@@ -190,8 +190,7 @@ class VaultEncryptionHelperIntegrationTest {
 
             @Test
             void shouldThrowWhenGivenAnUnencryptedFile() throws IOException {
-                var plainTextFile = Files.writeString(Path.of(tempDir, "foo.txt"), "some plain text")
-                        .toString();
+                var plainTextFile = Files.writeString(Path.of(tempDir, "foo.txt"), "some plain text");
 
                 assertThatThrownBy(() -> helper.decryptFile(plainTextFile))
                         .isExactlyInstanceOf(VaultEncryptionException.class)
@@ -209,32 +208,29 @@ class VaultEncryptionHelperIntegrationTest {
         @Nested
         class ToNewFile {
 
-            private Path outputFilePath;
-            private String outputFile;
+            private Path outputFile;
 
             @BeforeEach
             void setUp() {
-                outputFilePath = Path.of(tempDir, "new.txt");
-                outputFile = outputFilePath.toString();
+                outputFile = Path.of(tempDir, "new.txt");
             }
 
             @Test
             void shouldDecryptAnEncryptedFileInPlace() throws IOException {
-                var decryptedFile = helper.decryptFile(encryptedFile.toString(), outputFile);
+                var decryptedFile = helper.decryptFile(encryptedFile, outputFile);
 
                 assertThat(decryptedFile)
                         .describedAs("Decrypted file path should be the same")
-                        .isEqualTo(outputFilePath);
+                        .isEqualTo(outputFile);
 
-                var decryptedContents = Files.readString(outputFilePath, StandardCharsets.UTF_8);
+                var decryptedContents = Files.readString(outputFile, StandardCharsets.UTF_8);
 
                 assertThat(decryptedContents).isEqualToNormalizingWhitespace(THE_SECRET);
             }
 
             @Test
             void shouldThrowWhenGivenAnUnencryptedFile() throws IOException {
-                var plainTextFile = Files.writeString(Path.of(tempDir, "foo.txt"), "some plain text")
-                        .toString();
+                var plainTextFile = Files.writeString(Path.of(tempDir, "foo.txt"), "some plain text");
 
                 assertThatThrownBy(() -> helper.decryptFile(plainTextFile, outputFile))
                         .isExactlyInstanceOf(VaultEncryptionException.class)
@@ -243,7 +239,9 @@ class VaultEncryptionHelperIntegrationTest {
 
             @Test
             void shouldThrowWhenGivenFileThatDoesNotExist() {
-                assertThatThrownBy(() -> helper.decryptFile("/does/not/exist.txt", outputFile))
+                var encryptedFile = Path.of("/does/not/exist.txt");
+
+                assertThatThrownBy(() -> helper.decryptFile(encryptedFile, outputFile))
                         .isExactlyInstanceOf(VaultEncryptionException.class)
                         .hasMessageStartingWith("ansible-vault returned non-zero exit code 1. Stderr: ");
             }
@@ -263,7 +261,7 @@ class VaultEncryptionHelperIntegrationTest {
 
         @Test
         void shouldViewEncryptedFile() {
-            var plainText = helper.viewFile(encryptedFile.toString());
+            var plainText = helper.viewFile(encryptedFile);
 
             assertThat(plainText).isEqualToNormalizingWhitespace(THE_SECRET);
         }
@@ -272,15 +270,14 @@ class VaultEncryptionHelperIntegrationTest {
         void shouldNotChangeEncryptedFile() throws IOException {
             var originalEncryptedContent = Files.readString(encryptedFile, StandardCharsets.UTF_8);
 
-            helper.viewFile(encryptedFile.toString());
+            helper.viewFile(encryptedFile);
 
             assertThat(encryptedFile).hasContent(originalEncryptedContent);
         }
 
         @Test
         void shouldThrowWhenGivenAnUnencryptedFile() throws IOException {
-            var plainTextFile = Files.writeString(Path.of(tempDir, "foo.txt"), "some plain text")
-                    .toString();
+            var plainTextFile = Files.writeString(Path.of(tempDir, "foo.txt"), "some plain text");
 
             assertThatThrownBy(() -> helper.viewFile(plainTextFile))
                     .isExactlyInstanceOf(VaultEncryptionException.class)
@@ -320,26 +317,23 @@ class VaultEncryptionHelperIntegrationTest {
 
         @Test
         void shouldRekeyAnEncryptedFile() {
-            var rekeyedFile = helper.rekeyFile(encryptedFile.toString(), newPasswordFile.toString());
-            var rekeyedFilePath = rekeyedFile.toString();
+            var rekeyedFile = helper.rekeyFile(encryptedFile, newPasswordFile);
 
-            assertThatThrownBy(() -> helper.viewFile(rekeyedFilePath))
+            assertThatThrownBy(() -> helper.viewFile(rekeyedFile))
                     .describedAs("Should not be able to decrypt using original password file")
                     .isExactlyInstanceOf(VaultEncryptionException.class)
                     .hasMessageStartingWith("ansible-vault returned non-zero exit code 1. Stderr: ");
 
             var newHelper = new VaultEncryptionHelper(newConfig);
-            var fileContent = newHelper.viewFile(rekeyedFilePath);
+            var fileContent = newHelper.viewFile(rekeyedFile);
             assertThat(fileContent).isEqualToNormalizingWhitespace(THE_SECRET);
         }
 
         @Test
         void shouldThrowWhenGivenAnUnencryptedFile() throws IOException {
-            var plainTextFile = Files.writeString(Path.of(tempDir, "foo.txt"), "some plain text")
-                    .toString();
-            var newPasswordFilePath = newPasswordFile.toString();
+            var plainTextFile = Files.writeString(Path.of(tempDir, "foo.txt"), "some plain text");
 
-            assertThatThrownBy(() -> helper.rekeyFile(plainTextFile, newPasswordFilePath))
+            assertThatThrownBy(() -> helper.rekeyFile(plainTextFile, newPasswordFile))
                     .isExactlyInstanceOf(VaultEncryptionException.class)
                     .hasMessageStartingWith("ansible-vault returned non-zero exit code 1. Stderr: ");
         }
