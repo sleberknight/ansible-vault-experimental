@@ -43,7 +43,24 @@ class VaultConfigurationTest {
 
             assertTempDirectoryIsJavaTempDir(config);
         }
+    }
 
+    @Nested
+    class Copy {
+
+        @Test
+        void shouldCreateCopy() {
+            var original = VaultConfiguration.builder()
+                    .ansibleVaultPath("/usr/bin/ansible-vault")
+                    .vaultPasswordFilePath("/data/vault/.vault_pass")
+                    .build();
+
+            var copy = original.copyOf();
+
+            assertThat(copy)
+                    .isNotSameAs(original)
+                    .isEqualToComparingFieldByField(original);
+        }
     }
 
     private void assertTempDirectoryIsJavaTempDir(VaultConfiguration config) {

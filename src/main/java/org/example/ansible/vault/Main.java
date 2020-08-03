@@ -49,7 +49,7 @@ public class Main {
 
         var helper = new VaultEncryptionHelper(config);
 
-        var decryptedValue = helper.decryptString(encryptedString, config);
+        var decryptedValue = helper.decryptString(encryptedString);
         printDecryptedValue(decryptedValue);
 
         // --- Do several encrypt/decrypt cycles ----
@@ -61,10 +61,10 @@ public class Main {
             System.out.printf(
                     "---------- Iteration %d -------------------------------------------------------------------%n%n", i);
 
-            var encryptedValue = helper.encryptString(plainText, variableName, config);
+            var encryptedValue = helper.encryptString(plainText, variableName);
             printEncryptedValue(encryptedValue);
 
-            var reDecryptedValue = helper.decryptString(encryptedValue, config);
+            var reDecryptedValue = helper.decryptString(encryptedValue);
             printDecryptedValue(reDecryptedValue);
 
             plainText = reDecryptedValue;

@@ -47,7 +47,6 @@ class VaultEncryptionHelperIntegrationTest {
     private static String ansibleVaultFile;
 
     private VaultEncryptionHelper helper;
-    private VaultConfiguration config;
 
     @TempDir
     Path tempDirPath;
@@ -76,7 +75,7 @@ class VaultEncryptionHelperIntegrationTest {
         var passwordFilePath = Path.of(tempDir, ".vault_pass");
         Files.writeString(passwordFilePath, PASSWORD);
 
-        config = VaultConfiguration.builder()
+        var config = VaultConfiguration.builder()
                 .ansibleVaultPath(ansibleVaultFile)
                 .vaultPasswordFilePath(passwordFilePath.toString())
                 .tempDirectory(tempDir)
@@ -97,7 +96,7 @@ class VaultEncryptionHelperIntegrationTest {
 
         @Test
         void shouldEncryptPlainTextFile() {
-            var encryptedFile = helper.encryptFile(plainTextFile.toString(), config);
+            var encryptedFile = helper.encryptFile(plainTextFile.toString());
 
             assertThat(encryptedFile)
                     .describedAs("Encrypted file path should be the same")
@@ -106,16 +105,16 @@ class VaultEncryptionHelperIntegrationTest {
 
         @Test
         void shouldThrowWhenGivenAlreadyEncryptedFile() {
-            var encryptedFile = helper.encryptFile(plainTextFile.toString(), config).toString();
+            var encryptedFile = helper.encryptFile(plainTextFile.toString()).toString();
 
-            assertThatThrownBy(() -> helper.encryptFile(encryptedFile, config))
+            assertThatThrownBy(() -> helper.encryptFile(encryptedFile))
                     .isExactlyInstanceOf(VaultEncryptionException.class)
                     .hasMessageStartingWith("ansible-vault returned non-zero exit code 1. Stderr: ");
         }
 
         @Test
         void shouldThrowWhenGivenFileThatDoesNotExist() {
-            assertThatThrownBy(() -> helper.encryptFile("/does/not/exist.txt", config))
+            assertThatThrownBy(() -> helper.encryptFile("/does/not/exist.txt"))
                     .isExactlyInstanceOf(VaultEncryptionException.class)
                     .hasMessageStartingWith("ansible-vault returned non-zero exit code 1. Stderr: ");
         }
@@ -135,7 +134,7 @@ class VaultEncryptionHelperIntegrationTest {
 
         @Test
         void shouldEncryptPlainTextFile() throws IOException {
-            var encryptedFile = helper.encryptFile(plainTextFile.toString(), vaultIdLabel, config);
+            var encryptedFile = helper.encryptFile(plainTextFile.toString(), vaultIdLabel);
 
             assertThat(encryptedFile)
                     .describedAs("Encrypted file path should be the same")
@@ -147,16 +146,16 @@ class VaultEncryptionHelperIntegrationTest {
 
         @Test
         void shouldThrowWhenGivenAlreadyEncryptedFile() {
-            var encryptedFile = helper.encryptFile(plainTextFile.toString(), config).toString();
+            var encryptedFile = helper.encryptFile(plainTextFile.toString()).toString();
 
-            assertThatThrownBy(() -> helper.encryptFile(encryptedFile, vaultIdLabel, config))
+            assertThatThrownBy(() -> helper.encryptFile(encryptedFile, vaultIdLabel))
                     .isExactlyInstanceOf(VaultEncryptionException.class)
                     .hasMessageStartingWith("ansible-vault returned non-zero exit code 1. Stderr: ");
         }
 
         @Test
         void shouldThrowWhenGivenFileThatDoesNotExist() {
-            assertThatThrownBy(() -> helper.encryptFile("/does/not/exist.txt", vaultIdLabel, config))
+            assertThatThrownBy(() -> helper.encryptFile("/does/not/exist.txt", vaultIdLabel))
                     .isExactlyInstanceOf(VaultEncryptionException.class)
                     .hasMessageStartingWith("ansible-vault returned non-zero exit code 1. Stderr: ");
         }
@@ -178,7 +177,7 @@ class VaultEncryptionHelperIntegrationTest {
 
             @Test
             void shouldDecryptAnEncryptedFileInPlace() throws IOException {
-                var decryptedFile = helper.decryptFile(encryptedFile.toString(), config);
+                var decryptedFile = helper.decryptFile(encryptedFile.toString());
 
                 assertThat(decryptedFile)
                         .describedAs("Decrypted file path should be the same")
@@ -194,14 +193,14 @@ class VaultEncryptionHelperIntegrationTest {
                 var plainTextFile = Files.writeString(Path.of(tempDir, "foo.txt"), "some plain text")
                         .toString();
 
-                assertThatThrownBy(() -> helper.decryptFile(plainTextFile, config))
+                assertThatThrownBy(() -> helper.decryptFile(plainTextFile))
                         .isExactlyInstanceOf(VaultEncryptionException.class)
                         .hasMessageStartingWith("ansible-vault returned non-zero exit code 1. Stderr: ");
             }
 
             @Test
             void shouldThrowWhenGivenFileThatDoesNotExist() {
-                assertThatThrownBy(() -> helper.decryptFile("/does/not/exist.txt", config))
+                assertThatThrownBy(() -> helper.decryptFile("/does/not/exist.txt"))
                         .isExactlyInstanceOf(VaultEncryptionException.class)
                         .hasMessageStartingWith("ansible-vault returned non-zero exit code 1. Stderr: ");
             }
@@ -221,7 +220,7 @@ class VaultEncryptionHelperIntegrationTest {
 
             @Test
             void shouldDecryptAnEncryptedFileInPlace() throws IOException {
-                var decryptedFile = helper.decryptFile(encryptedFile.toString(), outputFile, config);
+                var decryptedFile = helper.decryptFile(encryptedFile.toString(), outputFile);
 
                 assertThat(decryptedFile)
                         .describedAs("Decrypted file path should be the same")
@@ -237,14 +236,14 @@ class VaultEncryptionHelperIntegrationTest {
                 var plainTextFile = Files.writeString(Path.of(tempDir, "foo.txt"), "some plain text")
                         .toString();
 
-                assertThatThrownBy(() -> helper.decryptFile(plainTextFile, outputFile, config))
+                assertThatThrownBy(() -> helper.decryptFile(plainTextFile, outputFile))
                         .isExactlyInstanceOf(VaultEncryptionException.class)
                         .hasMessageStartingWith("ansible-vault returned non-zero exit code 1. Stderr: ");
             }
 
             @Test
             void shouldThrowWhenGivenFileThatDoesNotExist() {
-                assertThatThrownBy(() -> helper.decryptFile("/does/not/exist.txt", outputFile, config))
+                assertThatThrownBy(() -> helper.decryptFile("/does/not/exist.txt", outputFile))
                         .isExactlyInstanceOf(VaultEncryptionException.class)
                         .hasMessageStartingWith("ansible-vault returned non-zero exit code 1. Stderr: ");
             }
@@ -264,7 +263,7 @@ class VaultEncryptionHelperIntegrationTest {
 
         @Test
         void shouldViewEncryptedFile() {
-            var plainText = helper.viewFile(encryptedFile.toString(), config);
+            var plainText = helper.viewFile(encryptedFile.toString());
 
             assertThat(plainText).isEqualToNormalizingWhitespace(THE_SECRET);
         }
@@ -273,7 +272,7 @@ class VaultEncryptionHelperIntegrationTest {
         void shouldNotChangeEncryptedFile() throws IOException {
             var originalEncryptedContent = Files.readString(encryptedFile, StandardCharsets.UTF_8);
 
-            helper.viewFile(encryptedFile.toString(), config);
+            helper.viewFile(encryptedFile.toString());
 
             assertThat(encryptedFile).hasContent(originalEncryptedContent);
         }
@@ -283,14 +282,14 @@ class VaultEncryptionHelperIntegrationTest {
             var plainTextFile = Files.writeString(Path.of(tempDir, "foo.txt"), "some plain text")
                     .toString();
 
-            assertThatThrownBy(() -> helper.viewFile(plainTextFile, config))
+            assertThatThrownBy(() -> helper.viewFile(plainTextFile))
                     .isExactlyInstanceOf(VaultEncryptionException.class)
                     .hasMessageStartingWith("ansible-vault returned non-zero exit code 1. Stderr: ");
         }
 
         @Test
         void shouldThrowWhenGivenFileThatDoesNotExist() {
-            assertThatThrownBy(() -> helper.viewFile("/does/not/exist.txt", config))
+            assertThatThrownBy(() -> helper.viewFile("/does/not/exist.txt"))
                     .isExactlyInstanceOf(VaultEncryptionException.class)
                     .hasMessageStartingWith("ansible-vault returned non-zero exit code 1. Stderr: ");
         }
@@ -321,16 +320,17 @@ class VaultEncryptionHelperIntegrationTest {
 
         @Test
         void shouldRekeyAnEncryptedFile() {
-            var rekeyedFile = helper.rekeyFile(encryptedFile.toString(), newPasswordFile.toString(), config);
-
+            var rekeyedFile = helper.rekeyFile(encryptedFile.toString(), newPasswordFile.toString());
             var rekeyedFilePath = rekeyedFile.toString();
-            var fileContent = helper.viewFile(rekeyedFilePath, newConfig);
-            assertThat(fileContent).isEqualToNormalizingWhitespace(THE_SECRET);
 
-            assertThatThrownBy(() -> helper.viewFile(rekeyedFilePath, config))
+            assertThatThrownBy(() -> helper.viewFile(rekeyedFilePath))
                     .describedAs("Should not be able to decrypt using original password file")
                     .isExactlyInstanceOf(VaultEncryptionException.class)
                     .hasMessageStartingWith("ansible-vault returned non-zero exit code 1. Stderr: ");
+
+            var newHelper = new VaultEncryptionHelper(newConfig);
+            var fileContent = newHelper.viewFile(rekeyedFilePath);
+            assertThat(fileContent).isEqualToNormalizingWhitespace(THE_SECRET);
         }
 
         @Test
@@ -339,7 +339,7 @@ class VaultEncryptionHelperIntegrationTest {
                     .toString();
             var newPasswordFilePath = newPasswordFile.toString();
 
-            assertThatThrownBy(() -> helper.rekeyFile(plainTextFile, newPasswordFilePath, config))
+            assertThatThrownBy(() -> helper.rekeyFile(plainTextFile, newPasswordFilePath))
                     .isExactlyInstanceOf(VaultEncryptionException.class)
                     .hasMessageStartingWith("ansible-vault returned non-zero exit code 1. Stderr: ");
         }
@@ -348,7 +348,7 @@ class VaultEncryptionHelperIntegrationTest {
         void shouldThrowWhenGivenFileThatDoesNotExist() {
             var newPasswordFilePath = newPasswordFile.toString();
 
-            assertThatThrownBy(() -> helper.rekeyFile("/does/not/exist.txt", newPasswordFilePath, config))
+            assertThatThrownBy(() -> helper.rekeyFile("/does/not/exist.txt", newPasswordFilePath))
                     .isExactlyInstanceOf(VaultEncryptionException.class)
                     .hasMessageStartingWith("ansible-vault returned non-zero exit code");
         }
@@ -364,7 +364,7 @@ class VaultEncryptionHelperIntegrationTest {
                 "some_variable,67890-12345"
         })
         void shouldEncryptStringInValidFormat(String variableName, String plainText) {
-            var encryptedString = helper.encryptString(plainText, variableName, config);
+            var encryptedString = helper.encryptString(plainText, variableName);
             var variable = new VaultEncryptedVariable(encryptedString);
 
             assertThat(variable.getVariableName()).isEqualTo(variableName);
@@ -378,8 +378,8 @@ class VaultEncryptionHelperIntegrationTest {
                 "another_variable,12345"
         })
         void shouldEncryptAndDecryptStrings(String variableName, String plainText) {
-            var encryptedString = helper.encryptString(plainText, variableName, config);
-            var decryptedString = helper.decryptString(encryptedString, config);
+            var encryptedString = helper.encryptString(plainText, variableName);
+            var decryptedString = helper.decryptString(encryptedString);
 
             assertThat(decryptedString).isEqualTo(plainText);
         }
@@ -402,7 +402,7 @@ class VaultEncryptionHelperIntegrationTest {
                 "some_variable,67890-12345"
         })
         void shouldEncryptStringInValidFormat(String variableName, String plainText) {
-            var encryptedString = helper.encryptString(vaultIdLabel, plainText, variableName, config);
+            var encryptedString = helper.encryptString(vaultIdLabel, plainText, variableName);
             var variable = new VaultEncryptedVariable(encryptedString);
 
             assertThat(variable.getVariableName()).isEqualTo(variableName);
@@ -416,13 +416,13 @@ class VaultEncryptionHelperIntegrationTest {
                 "another_variable,12345"
         })
         void shouldEncryptAndDecryptStrings(String variableName, String plainText) {
-            var encryptedString = helper.encryptString(vaultIdLabel, plainText, variableName, config);
+            var encryptedString = helper.encryptString(vaultIdLabel, plainText, variableName);
             var variable = new VaultEncryptedVariable(encryptedString);
 
             assertThat(variable.getVariableName()).isEqualTo(variableName);
             assertThat(variable.getVaultIdLabel()).hasValue(vaultIdLabel);
 
-            var decryptedString = helper.decryptString(encryptedString, config);
+            var decryptedString = helper.decryptString(encryptedString);
 
             assertThat(decryptedString).isEqualTo(plainText);
         }

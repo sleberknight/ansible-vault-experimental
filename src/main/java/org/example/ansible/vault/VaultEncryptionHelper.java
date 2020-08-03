@@ -40,11 +40,14 @@ public class VaultEncryptionHelper {
         checkArgumentNotNull(configuration, "configuration is required");
         checkArgumentNotNull(processHelper, "processHelper is required");
 
-        this.configuration = validateEncryptionConfiguration(configuration);
+        this.configuration = validateAndCopyEncryptionConfiguration(configuration);
         this.processHelper = processHelper;
     }
 
-    private static VaultConfiguration validateEncryptionConfiguration(VaultConfiguration configuration) {
+    /**
+     * Validates and returns (assuming validation passed) a defensive copy of the given configuration.
+     */
+    private static VaultConfiguration validateAndCopyEncryptionConfiguration(VaultConfiguration configuration) {
         checkArgumentNotBlank(configuration.getVaultPasswordFilePath(), "vaultPasswordFilePath is required");
         checkArgument(isExistingPath(configuration.getVaultPasswordFilePath()),
                 "vault password file does not exist: {}", configuration.getVaultPasswordFilePath());
@@ -52,14 +55,13 @@ public class VaultEncryptionHelper {
         checkArgument(isExistingPath(configuration.getAnsibleVaultPath()),
                 "ansible-vault executable does not exist: {}", configuration.getAnsibleVaultPath());
 
-        return configuration;
+        return configuration.copyOf();
     }
 
     /**
      * Wraps the ansible-vault encrypt command. Encrypts file in place.
      */
-    public Path encryptFile(String plainTextFilePath, VaultConfiguration configuration) {
-        validateEncryptionConfiguration(configuration);
+    public Path encryptFile(String plainTextFilePath) {
         var osCommand = VaultEncryptCommand.from(configuration, plainTextFilePath);
         return executeVaultCommandWithoutOutput(osCommand, plainTextFilePath);
     }
@@ -67,8 +69,7 @@ public class VaultEncryptionHelper {
     /**
      * Wraps the ansible-vault encrypt command using a vault ID label. Encrypts file in place.
      */
-    public Path encryptFile(String plainTextFilePath, String vaultIdLabel, VaultConfiguration configuration) {
-        validateEncryptionConfiguration(configuration);
+    public Path encryptFile(String plainTextFilePath, String vaultIdLabel) {
         var osCommand = VaultEncryptCommand.from(configuration, vaultIdLabel, plainTextFilePath);
         return executeVaultCommandWithoutOutput(osCommand, plainTextFilePath);
     }
@@ -76,8 +77,7 @@ public class VaultEncryptionHelper {
     /**
      * Wraps ansible-vault decrypt command. Decrypts file in place.
      */
-    public Path decryptFile(String encryptedFilePath, VaultConfiguration configuration) {
-        validateEncryptionConfiguration(configuration);
+    public Path decryptFile(String encryptedFilePath) {
         var osCommand = VaultDecryptCommand.from(configuration, encryptedFilePath);
         return executeVaultCommandWithoutOutput(osCommand, encryptedFilePath);
     }
@@ -86,13 +86,10 @@ public class VaultEncryptionHelper {
      * Wraps ansible-vault decrypt command. Decrypts file to a new specified output path.
      * The original encrypted file is not modified.
      */
-    public Path decryptFile(String encryptedFilePath,
-                            String outputFilePath,
-                            VaultConfiguration configuration) {
+    public Path decryptFile(String encryptedFilePath, String outputFilePath) {
         checkArgument(!outputFilePath.equalsIgnoreCase(encryptedFilePath),
                 "outputFilePath must be different than encryptedFilePath (case-insensitive)");
 
-        validateEncryptionConfiguration(configuration);
         var osCommand = VaultDecryptCommand.from(configuration, encryptedFilePath, outputFilePath);
         executeVaultCommandWithoutOutput(osCommand, encryptedFilePath);
 
@@ -103,8 +100,7 @@ public class VaultEncryptionHelper {
      * Wraps ansible-vault view command. Returns the decrypted contents of the file.
      * The original encrypted file is not modified.
      */
-    public String viewFile(String encryptedFilePath, VaultConfiguration configuration) {
-        validateEncryptionConfiguration(configuration);
+    public String viewFile(String encryptedFilePath) {
         var osCommand = VaultViewCommand.from(configuration, encryptedFilePath);
         return executeVaultCommandReturningStdout(osCommand);
     }
@@ -113,13 +109,10 @@ public class VaultEncryptionHelper {
     /**
      * Wraps ansible-vault rekey command. Returns the path of the rekeyed file.
      */
-    public Path rekeyFile(String encryptedFilePath,
-                          String newVaultPasswordFilePath,
-                          VaultConfiguration configuration) {
+    public Path rekeyFile(String encryptedFilePath, String newVaultPasswordFilePath) {
         checkArgument(!newVaultPasswordFilePath.equalsIgnoreCase(configuration.getVaultPasswordFilePath()),
                 "newVaultPasswordFilePath file must be different than configuration.vaultPasswordFilePath (case-insensitive)");
 
-        validateEncryptionConfiguration(configuration);
         var osCommand = VaultRekeyCommand.from(configuration, encryptedFilePath, newVaultPasswordFilePath);
         return executeVaultCommandWithoutOutput(osCommand, encryptedFilePath);
     }
@@ -132,8 +125,7 @@ public class VaultEncryptionHelper {
     /**
      * Wraps the ansible-vault encrypt_string command.
      */
-    public String encryptString(String plainText, String variableName, VaultConfiguration configuration) {
-        validateEncryptionConfiguration(configuration);
+    public String encryptString(String plainText, String variableName) {
         var osCommand = VaultEncryptStringCommand.from(configuration, plainText, variableName);
         return executeVaultCommandReturningStdout(osCommand);
     }
@@ -141,11 +133,7 @@ public class VaultEncryptionHelper {
     /**
      * Wraps the ansible-vault encrypt_string command  using a vault ID label.
      */
-    public String encryptString(String vaultIdLabel,
-                                String plainText,
-                                String variableName,
-                                VaultConfiguration configuration) {
-        validateEncryptionConfiguration(configuration);
+    public String encryptString(String vaultIdLabel, String plainText, String variableName) {
         var osCommand = VaultEncryptStringCommand.from(configuration, vaultIdLabel, plainText, variableName);
         return executeVaultCommandReturningStdout(osCommand);
     }
@@ -153,8 +141,7 @@ public class VaultEncryptionHelper {
     /**
      * Decrypts an encrypted string variable formatted using encrypt_string with a --name option.
      */
-    public String decryptString(String encryptedString, VaultConfiguration configuration) {
-        validateEncryptionConfiguration(configuration);
+    public String decryptString(String encryptedString) {
         checkArgumentNotBlank(configuration.getTempDirectory(),
                 "configuration.tempDirectory is required for decryptString");
 

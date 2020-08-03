@@ -39,11 +39,11 @@ public class MainDecryptFile {
 
         var helper = new VaultEncryptionHelper(config);
 
-        var encryptedFile = helper.encryptFile(textFile.toString(), config);
+        var encryptedFile = helper.encryptFile(textFile.toString());
 
         System.out.println("Encrypted file: " + encryptedFile);
 
-        var decryptedFile = helper.decryptFile(encryptedFile.toString(), config);
+        var decryptedFile = helper.decryptFile(encryptedFile.toString());
 
         System.out.println("Decrypted file: " + decryptedFile);
 
