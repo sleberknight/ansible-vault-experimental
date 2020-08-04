@@ -1,9 +1,12 @@
 package org.example.ansible.vault;
 
 import static java.util.Objects.nonNull;
+import static org.kiwiproject.base.KiwiPreconditions.checkArgumentNotBlank;
+import static org.kiwiproject.base.KiwiPreconditions.checkArgumentNotNull;
 
 import lombok.Builder;
 
+import javax.annotation.Nullable;
 import java.nio.file.Paths;
 import java.util.List;
 
@@ -27,7 +30,10 @@ public class VaultDecryptCommand implements OsCommand {
 
     public static VaultDecryptCommand from(VaultConfiguration configuration,
                                            String encryptedFilePath,
-                                           String outputFilePath) {
+                                           @Nullable String outputFilePath) {
+        checkArgumentNotNull(configuration, "configuration cannot be null");
+        checkArgumentNotBlank(encryptedFilePath, "encryptedFilePath cannot be blank");
+
         return VaultDecryptCommand.builder()
                 .ansibleVaultPath(configuration.getAnsibleVaultPath())
                 .vaultPasswordFilePath(configuration.getVaultPasswordFilePath())

@@ -1,10 +1,13 @@
 package org.example.ansible.vault;
 
 import static java.util.Objects.isNull;
+import static org.kiwiproject.base.KiwiPreconditions.checkArgumentNotBlank;
+import static org.kiwiproject.base.KiwiPreconditions.checkArgumentNotNull;
 import static org.kiwiproject.base.KiwiStrings.f;
 
 import lombok.Builder;
 
+import javax.annotation.Nullable;
 import java.util.List;
 
 @Builder
@@ -23,9 +26,13 @@ public class VaultEncryptStringCommand implements OsCommand {
     }
 
     public static VaultEncryptStringCommand from(VaultConfiguration configuration,
-                                                 String vaultIdLabel,
+                                                 @Nullable String vaultIdLabel,
                                                  String plainText,
                                                  String variableName) {
+        checkArgumentNotNull(configuration, "configuration cannot be null");
+        checkArgumentNotBlank(plainText, "plainText cannot be blank");
+        checkArgumentNotBlank(variableName, "variableName cannot be blank");
+
         return VaultEncryptStringCommand.builder()
                 .ansibleVaultPath(configuration.getAnsibleVaultPath())
                 .vaultIdLabel(vaultIdLabel)
