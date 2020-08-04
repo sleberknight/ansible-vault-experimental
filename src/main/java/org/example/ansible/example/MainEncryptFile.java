@@ -1,8 +1,10 @@
-package org.example.ansible.vault;
+package org.example.ansible.example;
 
 import static com.google.common.base.Verify.verify;
 
 import org.apache.commons.io.FileUtils;
+import org.example.ansible.vault.VaultConfiguration;
+import org.example.ansible.vault.VaultEncryptionHelper;
 
 import java.io.File;
 import java.io.IOException;
