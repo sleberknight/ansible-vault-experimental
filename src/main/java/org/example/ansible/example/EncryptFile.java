@@ -13,10 +13,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 /**
- * Simple class to exercise ansible-vault decrypt manually (in place replacement).
+ * Simple class to exercise ansible-vault encrypt manually.
  */
 @SuppressWarnings({"java:S106", "java:S1192", "java:S125"})
-public class MainDecryptFile {
+public class EncryptFile {
 
     public static void main(String[] args) throws IOException {
         var separator = File.separator;
@@ -26,13 +26,12 @@ public class MainDecryptFile {
 
         var vaultPasswordPath = Path.of(".", "src", "main", "resources", "ansible-vault", ".vault_pass");
 
-        var tmpDir = Path.of("/tmp/vault-decrypt");
+        var tmpDir = Path.of("/tmp/vault-encrypt");
         FileUtils.deleteDirectory(tmpDir.toFile());
 
         Files.createDirectory(tmpDir);
         var filePath = Path.of(tmpDir.toString(), "tmp" + System.nanoTime() + ".txt");
-        var plainText = "some plain text" + System.lineSeparator();
-        var textFile = Files.writeString(filePath, plainText);
+        var textFile = Files.writeString(filePath, "some plain text" + System.lineSeparator());
 
         var config = VaultConfiguration.builder()
                 .ansibleVaultPath(ansibleVaultExecPath.toString())
@@ -43,16 +42,25 @@ public class MainDecryptFile {
 
         var encryptedFile = helper.encryptFile(textFile);
 
+        verify(encryptedFile.equals(textFile), "encryptedFile (%s) != textFile (%s)",
+                encryptedFile, textFile);
+
+        var encryptedContent = Files.readString(encryptedFile, StandardCharsets.UTF_8);
+
         System.out.println("Encrypted file: " + encryptedFile);
+        System.out.println("Encrypted file content:");
+        System.out.println(encryptedContent);
+        System.out.println("----- End encrypted file content -----");
 
-        var decryptedFile = helper.decryptFile(encryptedFile);
+        System.out.println();
+        System.out.println("Now cause failure by trying to encrypt the already-encrypted file...");
 
-        System.out.println("Decrypted file: " + decryptedFile);
-
-        var content = Files.readString(decryptedFile, StandardCharsets.UTF_8);
-
-        verify(plainText.equals(content),
-                "decrypted content [%s] and plain text [%s] do not match",
-                content, plainText);
+        try {
+            helper.encryptFile(encryptedFile);
+        } catch (Exception e) {
+            System.err.println("Error encrypting " + textFile);
+            System.err.println(e.getClass());
+            System.err.println(e.getMessage());
+        }
     }
 }

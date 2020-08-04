@@ -12,7 +12,7 @@ import java.nio.file.Path;
  * Simple class to show building a command.
  */
 @SuppressWarnings({"java:S106"})
-public class MainBuildCommand {
+public class BuildCommand {
 
     public static void main(String[] args) {
         var separator = File.separator;

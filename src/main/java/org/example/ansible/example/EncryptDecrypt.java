@@ -14,7 +14,7 @@ import java.nio.file.Path;
  * actually execute ansible-vault.
  */
 @SuppressWarnings({"java:S106", "java:S1192", "java:S125"})
-public class Main {
+public class EncryptDecrypt {
 
     public static void main(String[] args) throws IOException {
         var separator = File.separator;
