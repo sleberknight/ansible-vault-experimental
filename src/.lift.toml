@@ -1,2 +1,2 @@
-build = "mvn compile -B -DskipTests=true"
+build = "mvn -B compile"
 jdk11 = true
