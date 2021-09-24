@@ -1,2 +1,2 @@
-build = "maven"
+build = "mvn -DskipTests=true"
 jdk11 = true
