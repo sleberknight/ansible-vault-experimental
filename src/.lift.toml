@@ -1,2 +1,2 @@
-build = "maven"
+build = "this_should_be_invalid"
 jdk11 = true
