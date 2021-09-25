@@ -1,2 +1,1 @@
-build = "mvn -B compile"
 jdk11 = true
