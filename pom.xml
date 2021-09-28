@@ -152,10 +152,7 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>${maven-compiler-plugin.version}</version>
                 <configuration>
-                    <!-- TODO Temporary...see if Lift works without this flag but with the old source and target ones... -->
-                    <!--<release>11</release>-->
-                    <source>11</source>
-                    <target>11</target>
+                    <release>11</release>
                     <encoding>UTF-8</encoding>
                 </configuration>
             </plugin>
